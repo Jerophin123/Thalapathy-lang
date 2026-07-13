@@ -1,0 +1,16 @@
+master Hero {
+    string name;
+    
+    mersal init(string name) {
+        this.name = name;
+    }
+
+    mersal intro() {
+        sollu("Vanakkam", this.name);
+    }
+}
+
+thalapathy aarambam {
+    makkal hero = Hero("Vijay");
+    hero.intro();
+}

@@ -1,0 +1,7 @@
+thalapathy aarambam {
+    nanba hero = "Vijay";
+    makkal score = 100;
+    score += 50;
+    sollu(hero);
+    sollu(score);
+}

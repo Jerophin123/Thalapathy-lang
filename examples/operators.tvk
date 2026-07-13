@@ -1,0 +1,9 @@
+thalapathy aarambam {
+    int a = 10;
+    int b = 5;
+    sollu(a + b);
+    sollu(a - b);
+    sollu(a * b);
+    sollu(a / b);
+    sollu(a % b);
+}

@@ -1,0 +1,23 @@
+master Hero {
+    mersal intro() {
+        sollu("Hero Entry");
+    }
+}
+
+master Thalapathy varisu Hero {
+    string name;
+    
+    mersal intro() {
+        sollu("Mass Entry");
+    }
+
+    mersal parentIntro() {
+        super.intro();
+    }
+}
+
+thalapathy aarambam {
+    makkal h = Thalapathy();
+    h.intro();
+    h.parentIntro();
+}

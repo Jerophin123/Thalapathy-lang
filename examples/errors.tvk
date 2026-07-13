@@ -1,0 +1,15 @@
+master Error {
+    string message;
+    mersal init(string message) {
+        this.message = message;
+    }
+}
+
+thalapathy aarambam {
+    pokkiri {
+        theri Error("Something went wrong");
+    }
+    kaavalan (e) {
+        sollu(e.message);
+    }
+}

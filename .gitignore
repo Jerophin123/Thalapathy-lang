@@ -1,0 +1,35 @@
+# Build directories
+/build/
+/build-*/
+/out/
+/bin/
+
+# Compiled artifacts
+*.vijay
+*.thalac
+*.exe
+*.a
+*.o
+*.obj
+*.lib
+*.dll
+*.so
+*.dylib
+
+# IDE / Editor folders
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# CMake temporary files
+CMakeCache.txt
+CMakeFiles/
+CMakeSettings.json
+CMakeUserPresets.json
+CTestTestfile.cmake
+Makefile
+cmake_install.cmake
+install_manifest.txt

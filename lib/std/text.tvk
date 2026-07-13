@@ -1,0 +1,9 @@
+// text.tvk - Standard Text helper module
+
+mersal inai(string a, string b) {
+    thiruppi a + b;
+}
+
+mersal empty(string s) {
+    thiruppi len(s) == 0;
+}

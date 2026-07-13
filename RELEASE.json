@@ -1,0 +1,16 @@
+{
+  "tdkVersion": "1.0.0",
+  "languageVersion": "1.0.0",
+  "veafVersion": 3,
+  "artifactMagic": "VJAY",
+  "sourceExtension": ".tvk",
+  "artifactExtension": ".vijay",
+  "components": {
+    "standardLibrary": true,
+    "vscodeTools": true,
+    "publicHeaders": true,
+    "cmakeIntegration": true,
+    "runtimeResources": false,
+    "veafResources": false
+  }
+}

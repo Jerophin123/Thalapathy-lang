@@ -1,0 +1,5 @@
+// time.tvk - Standard Time module
+
+mersal now() {
+    thiruppi __native_time_now();
+}

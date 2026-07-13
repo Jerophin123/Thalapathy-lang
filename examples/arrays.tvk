@@ -1,0 +1,10 @@
+thalapathy aarambam {
+    makkal heroes = ["Vijay", "JD", "Rayappan"];
+    sollu(heroes[0]);
+    heroes[1] = "Leo";
+    sollu(heroes[1]);
+    heroes.push("Ghilli");
+    sollu(len(heroes));
+    heroes.pop();
+    sollu(len(heroes));
+}

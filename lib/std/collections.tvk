@@ -1,0 +1,29 @@
+// collections.tvk - Standard Collections module
+
+master Stack {
+    var items;
+    int size;
+
+    mersal init() {
+        this.items = {};
+        this.size = 0;
+    }
+
+    mersal push(var item) {
+        this.items[string(this.size)] = item;
+        this.size = this.size + 1;
+    }
+
+    mersal pop() {
+        ghilli (this.size == 0) {
+            thiruppi null;
+        }
+        this.size = this.size - 1;
+        makkal item = this.items[string(this.size)];
+        thiruppi item;
+    }
+
+    mersal isEmpty() {
+        thiruppi this.size == 0;
+    }
+}

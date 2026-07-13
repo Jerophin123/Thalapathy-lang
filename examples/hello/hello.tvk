@@ -1,0 +1,5 @@
+// Hello World — THALAPATHY example
+thalapathy aarambam {
+    sollu("Vanakkam, Ulagam!");
+    sollu("Welcome to THALAPATHY Programming Language!");
+}

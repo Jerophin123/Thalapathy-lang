@@ -1,0 +1,8 @@
+thalapathy aarambam {
+    int year = 2026;
+    ghilli (year == 2026) {
+        sollu("Cup mukkiyam Bigilu");
+    } illana {
+        sollu("I'm waiting...");
+    }
+}

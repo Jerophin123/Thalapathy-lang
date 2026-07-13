@@ -1,0 +1,6 @@
+thalapathy aarambam {
+    mersal add(int a, int b) -> int {
+        thiruppi a + b;
+    }
+    sollu(add(10, 20));
+}

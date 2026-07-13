@@ -1,0 +1,9 @@
+// io.tvk - Standard I/O module
+
+mersal vaasi() {
+    thiruppi __native_read_line();
+}
+
+mersal ezhudhu(string msg) {
+    sollu(msg);
+}

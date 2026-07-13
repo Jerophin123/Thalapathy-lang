@@ -1,0 +1,37 @@
+// math.tvk - Standard Math helper module
+
+mersal abs(float x) -> float {
+    ghilli (x < 0) {
+        thiruppi -x;
+    }
+    thiruppi x;
+}
+
+mersal max(float a, float b) -> float {
+    ghilli (a > b) {
+        thiruppi a;
+    }
+    thiruppi b;
+}
+
+mersal min(float a, float b) -> float {
+    ghilli (a < b) {
+        thiruppi a;
+    }
+    thiruppi b;
+}
+
+mersal pow(float base, int exp) -> float {
+    makkal res = 1.0;
+    bigil (makkal i = 0; i < exp; i = i + 1) {
+        res = res * base;
+    }
+    thiruppi res;
+}
+
+mersal fact(int n) -> int {
+    ghilli (n <= 1) {
+        thiruppi 1;
+    }
+    thiruppi n * fact(n - 1);
+}

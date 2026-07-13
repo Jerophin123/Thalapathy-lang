@@ -1,0 +1,35 @@
+{
+    "name": "vscode-thalapathy",
+    "displayName": "THALAPATHY",
+    "description": "VS Code syntax highlighting for the THALAPATHY programming language (.tvk)",
+    "version": "0.1.0",
+    "publisher": "thalapathy-devs",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "thalapathy",
+                "aliases": [
+                    "THALAPATHY",
+                    "thalapathy"
+                ],
+                "extensions": [
+                    ".tvk"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "thalapathy",
+                "scopeName": "source.tvk",
+                "path": "./syntaxes/thalapathy.tmLanguage.json"
+            }
+        ]
+    }
+}

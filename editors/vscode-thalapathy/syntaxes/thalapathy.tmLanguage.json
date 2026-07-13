@@ -1,0 +1,96 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "THALAPATHY",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.tvk",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.block.tvk",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.tvk",
+                    "match": "\\b(ghilli|illana|bigil|vaathi|thiruppi|theri|pokkiri|kaavalan|break|continue|waiting)\\b"
+                },
+                {
+                    "name": "keyword.declaration.tvk",
+                    "match": "\\b(thalapathy|aarambam|nanba|makkal|uruthi|mersal|master|varisu|sarkar|beast|leo|goat|kaththi)\\b"
+                },
+                {
+                    "name": "storage.type.tvk",
+                    "match": "\\b(int|float|bool|string|char|void|null)\\b"
+                },
+                {
+                    "name": "constant.language.tvk",
+                    "match": "\\b(true|false|this|super)\\b"
+                },
+                {
+                    "name": "support.function.tvk",
+                    "match": "\\b(sollu|range|len|type|string|int|float)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.tvk",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.tvk",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.tvk",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.tvk",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.float.tvk",
+                    "match": "\\b\\d+\\.\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.tvk",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        }
+    ],
+    "scopeName": "source.tvk"
+}

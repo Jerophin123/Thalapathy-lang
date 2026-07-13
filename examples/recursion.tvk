@@ -1,0 +1,9 @@
+thalapathy aarambam {
+    mersal factorial(int n) -> int {
+        ghilli (n <= 1) {
+            thiruppi 1;
+        }
+        thiruppi n * factorial(n - 1);
+    }
+    sollu(factorial(5));
+}

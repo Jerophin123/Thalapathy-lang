@@ -1,0 +1,8 @@
+// Standard library usage example — THALAPATHY
+sarkar io;
+
+thalapathy aarambam {
+    sollu("THALAPATHY Standard Library Demo");
+    nanba greeting = "Hello from stdlib!";
+    sollu(greeting);
+}

@@ -1,0 +1,10 @@
+thalapathy aarambam {
+    makkal hero = {
+        name: "Vijay",
+        title: "Thalapathy"
+    };
+    sollu(hero.name);
+    sollu(hero["title"]);
+    hero.title = "GOAT";
+    sollu(hero.title);
+}
