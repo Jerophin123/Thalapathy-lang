@@ -21,7 +21,8 @@
 [![Build](https://img.shields.io/badge/build-passing-FFC300?style=for-the-badge&labelColor=E32227)](#)
 [![License](https://img.shields.io/badge/license-see%20legal%2F-E32227?style=for-the-badge&labelColor=FFC300&logoColor=black)](#)
 
-*A general-purpose, multi-paradigm programming language built as a fan tribute — where every compile is a "Vaathi Coming" moment and every runtime error gets its own punch dialogue.*
+*A general-purpose, multi-paradigm programming language built as a fan tribute — where every compile is a "Vaathi Coming" moment and every runtime error gets its own punch dialogue. This programming language is a tribute to the ex-actor and the Honourable Chief Minister, C. Joseph Vijay.*
+
 
 </div>
 
@@ -32,6 +33,15 @@
 > THALAPATHY is an independent programming-language project created as a fan tribute and parody. It is **not affiliated with, endorsed by, or officially connected to** Vijay, TVK, DMK, any political party, film studio, production company, or rights holder. Political references in optional satire diagnostics are **fictional programming jokes** and should not be interpreted as factual claims. This is a compiler, not a manifesto. Vote with your ballot, not your build system.
 
 ---
+
+## <span style="color:#E32227">🌟 A Tribute to</span> <span style="color:#FFC300">C. Joseph Vijay</span>
+
+This programming language is a tribute to the ex-actor and the Honourable Chief Minister, C. Joseph Vijay.
+
+We glorify the incredible acting career, the great public service, and the immense goodness provided by our Chief Minister, C. Joseph Vijay. From delivering spellbinding, legendary performances on the silver screen to initiating countless welfare programs that uplift the needy, his dedication to the people and his acts of benevolence continue to inspire millions. His vision of leadership, coupled with his outstanding contributions to society, serves as the guiding inspiration behind this development kit.
+
+---
+
 
 ## <span style="color:#E32227">🐯 What Is</span> <span style="color:#FFC300">THALAPATHY?</span>
 
