@@ -1,6 +1,7 @@
 #include "thalapathy/parser/Parser.hpp"
 #include <sstream>
 #include <iostream>
+#include <cctype>
 
 namespace thalapathy {
 
@@ -59,6 +60,27 @@ Token Parser::consume(TokenType type, const std::string& message) {
     throw std::runtime_error(message);
 }
 
+// Accept a plain identifier OR any keyword used in a name position (map keys,
+// member names). Keyword tokens carry their spelling so `req.body` and
+// `{ master: ... }` work even though `body`/`master` may be reserved words.
+std::string Parser::consumeNameLike(const std::string& message) {
+    Token t = peek();
+    if (t.type == TokenType::IDENTIFIER) {
+        advance();
+        return t.value;
+    }
+    // Any non-symbol keyword token: spelling comes from the token text or table.
+    std::string spelling = t.value.empty() ? std::string(tokenTypeToString(t.type)) : t.value;
+    bool looksLikeWord = !spelling.empty() &&
+                         (std::isalpha(static_cast<unsigned char>(spelling[0])) || spelling[0] == '_');
+    if (looksLikeWord) {
+        advance();
+        return spelling;
+    }
+    addError(t, message);
+    throw std::runtime_error(message);
+}
+
 void Parser::addError(const Token& token, const std::string& message) {
     std::stringstream ss;
     ss << "parser error: " << message << " at " << token.span.filename
@@ -92,15 +114,38 @@ void Parser::synchronize() {
     }
 }
 
+// Parse a dotted name like `com.tvk.models` (Java-style package/module path).
+std::string Parser::parseDottedName(const std::string& what) {
+    Token first = consume(TokenType::IDENTIFIER, "expected " + what);
+    std::string name = first.value;
+    while (match(TokenType::DOT)) {
+        Token seg = consume(TokenType::IDENTIFIER, "expected identifier after '.' in " + what);
+        name += "." + seg.value;
+    }
+    return name;
+}
+
 // Declarations
 std::unique_ptr<ASTNode> Parser::declaration() {
-    // module import: sarkar name;
+    // package declaration: nadu com.tvk.models;
+    if (match(TokenType::NADU)) {
+        Token kw = previous();
+        std::string pkg = parseDottedName("package name after 'nadu'");
+        consume(TokenType::SEMICOLON, "expected ';' after package name");
+        auto pkgNode = std::make_unique<PackageDecl>();
+        pkgNode->span = kw.span;
+        pkgNode->packageName = pkg;
+        return pkgNode;
+    }
+
+    // module import: sarkar name;  (supports dotted paths: sarkar app.models.user;)
     if (match(TokenType::SARKAR)) {
-        Token nameToken = consume(TokenType::IDENTIFIER, "expected module name after 'sarkar'");
+        Token kw = previous();
+        std::string moduleName = parseDottedName("module name after 'sarkar'");
         consume(TokenType::SEMICOLON, "expected ';' after module name");
         auto importNode = std::make_unique<ImportDecl>();
-        importNode->span = nameToken.span;
-        importNode->moduleName = nameToken.value;
+        importNode->span = kw.span;
+        importNode->moduleName = moduleName;
         return importNode;
     }
 
@@ -112,6 +157,11 @@ std::unique_ptr<ASTNode> Parser::declaration() {
     // interface: kaththi Name
     if (match(TokenType::KATHTHI)) {
         return interfaceDeclaration();
+    }
+
+    // enum: vagai Name { A, B, C }
+    if (match(TokenType::VAGAI)) {
+        return enumDeclaration();
     }
 
     // class: master Name
@@ -215,7 +265,11 @@ std::unique_ptr<FuncDecl> Parser::functionDeclaration() {
         do {
             Token typeToken = advance(); // parameter type (e.g. int, float, string)
             Token paramName = consume(TokenType::IDENTIFIER, "expected parameter name");
-            decl->params.push_back(FuncDecl::Param{paramName.value, typeToken.value});
+            FuncDecl::Param p{paramName.value, typeToken.value, nullptr};
+            if (match(TokenType::EQUAL)) {
+                p.defaultValue = std::shared_ptr<ASTNode>(expression().release());
+            }
+            decl->params.push_back(std::move(p));
         } while (match(TokenType::COMMA));
     }
     consume(TokenType::RIGHT_PAREN, "expected ')' after parameters");
@@ -379,7 +433,11 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
                         do {
                             std::string pTypeStr = parseTypeString();
                             Token pName = consume(TokenType::IDENTIFIER, "expected parameter name");
-                            params.push_back(FuncDecl::Param{pName.value, pTypeStr});
+                            FuncDecl::Param p{pName.value, pTypeStr, nullptr};
+                            if (match(TokenType::EQUAL)) {
+                                p.defaultValue = std::shared_ptr<ASTNode>(expression().release());
+                            }
+                            params.push_back(std::move(p));
                         } while (match(TokenType::COMMA));
                     }
                     consume(TokenType::RIGHT_PAREN, "expected ')' after parameters");
@@ -432,7 +490,11 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
                         do {
                             std::string pTypeStr = parseTypeString();
                             Token pName = consume(TokenType::IDENTIFIER, "expected parameter name");
-                            params.push_back(FuncDecl::Param{pName.value, pTypeStr});
+                            FuncDecl::Param p{pName.value, pTypeStr, nullptr};
+                            if (match(TokenType::EQUAL)) {
+                                p.defaultValue = std::shared_ptr<ASTNode>(expression().release());
+                            }
+                            params.push_back(std::move(p));
                         } while (match(TokenType::COMMA));
                     }
                     consume(TokenType::RIGHT_PAREN, "expected ')' after parameters");
@@ -563,6 +625,27 @@ std::unique_ptr<InterfaceDecl> Parser::interfaceDeclaration() {
     return decl;
 }
 
+std::unique_ptr<EnumDecl> Parser::enumDeclaration() {
+    Token vagaiToken = previous();
+    Token nameToken = consume(TokenType::IDENTIFIER, "expected enum name after 'vagai'");
+    consume(TokenType::LEFT_BRACE, "expected '{' before enum body");
+
+    auto decl = std::make_unique<EnumDecl>();
+    decl->span = vagaiToken.span;
+    decl->name = nameToken.value;
+
+    if (!check(TokenType::RIGHT_BRACE)) {
+        do {
+            if (check(TokenType::RIGHT_BRACE)) break; // trailing comma
+            Token member = consume(TokenType::IDENTIFIER, "expected enum member name");
+            decl->members.push_back(member.value);
+        } while (match(TokenType::COMMA));
+    }
+
+    consume(TokenType::RIGHT_BRACE, "expected '}' after enum body");
+    return decl;
+}
+
 std::string Parser::parseTypeString() {
     Token typeToken = advance();
     std::string typeStr = typeToken.value;
@@ -590,6 +673,12 @@ std::unique_ptr<ASTNode> Parser::statement() {
     }
     if (match(TokenType::VAATHI)) {
         return rangeLoopStatement();
+    }
+    if (match(TokenType::THUPPAKKI)) {
+        return whileStatement();
+    }
+    if (match(TokenType::THALAIVAA)) {
+        return switchStatement();
     }
     if (match(TokenType::THIRUPPI)) {
         return returnStatement();
@@ -694,32 +783,96 @@ std::unique_ptr<ForStmt> Parser::forStatement() {
     return stmt;
 }
 
-std::unique_ptr<RangeLoopStmt> Parser::rangeLoopStatement() {
+// `vaathi x in <expr>`:
+//   - if <expr> is `range(a, b)`  -> classic counted RangeLoopStmt
+//   - otherwise                   -> ForEachStmt over an array/string/map
+std::unique_ptr<ASTNode> Parser::rangeLoopStatement() {
     Token vaathiToken = previous();
     Token varNameToken = consume(TokenType::IDENTIFIER, "expected loop variable identifier");
-    
-    // Support range iteration syntax: vaathi i in range(start, end)
-    consume(TokenType::IDENTIFIER, "expected 'in' keyword in loop"); // standard text 'in'
-    
-    Token rangeFuncToken = consume(TokenType::IDENTIFIER, "expected 'range' function");
-    if (rangeFuncToken.value != "range") {
-        addError(rangeFuncToken, "expected range iterator function");
+
+    Token inToken = consume(TokenType::IDENTIFIER, "expected 'in' keyword in loop");
+    if (inToken.value != "in") {
+        addError(inToken, "expected 'in' between loop variable and iterable");
     }
 
-    consume(TokenType::LEFT_PAREN, "expected '(' after 'range'");
-    auto startExpr = expression();
-    consume(TokenType::COMMA, "expected ',' between range bounds");
-    auto endExpr = expression();
-    consume(TokenType::RIGHT_PAREN, "expected ')' after range bounds");
+    // Special-case the range(a, b) counted loop while it is still an identifier.
+    if (check(TokenType::IDENTIFIER) && peek().value == "range") {
+        advance(); // consume 'range'
+        consume(TokenType::LEFT_PAREN, "expected '(' after 'range'");
+        auto startExpr = expression();
+        consume(TokenType::COMMA, "expected ',' between range bounds");
+        auto endExpr = expression();
+        consume(TokenType::RIGHT_PAREN, "expected ')' after range bounds");
+        auto body = statement();
+
+        auto stmt = std::make_unique<RangeLoopStmt>();
+        stmt->span = vaathiToken.span;
+        stmt->varName = varNameToken.value;
+        stmt->startExpr = std::move(startExpr);
+        stmt->endExpr = std::move(endExpr);
+        stmt->body = std::move(body);
+        return stmt;
+    }
+
+    // General foreach over any iterable expression.
+    auto iterable = expression();
+    auto body = statement();
+
+    auto stmt = std::make_unique<ForEachStmt>();
+    stmt->span = vaathiToken.span;
+    stmt->varName = varNameToken.value;
+    stmt->iterable = std::move(iterable);
+    stmt->body = std::move(body);
+    return stmt;
+}
+
+std::unique_ptr<WhileStmt> Parser::whileStatement() {
+    Token thuppakkiToken = previous();
+    consume(TokenType::LEFT_PAREN, "expected '(' after 'thuppakki'");
+    auto condition = expression();
+    consume(TokenType::RIGHT_PAREN, "expected ')' after thuppakki condition");
 
     auto body = statement();
 
-    auto stmt = std::make_unique<RangeLoopStmt>();
-    stmt->span = vaathiToken.span;
-    stmt->varName = varNameToken.value;
-    stmt->startExpr = std::move(startExpr);
-    stmt->endExpr = std::move(endExpr);
+    auto stmt = std::make_unique<WhileStmt>();
+    stmt->span = thuppakkiToken.span;
+    stmt->condition = std::move(condition);
     stmt->body = std::move(body);
+    return stmt;
+}
+
+std::unique_ptr<SwitchStmt> Parser::switchStatement() {
+    Token thalaivaaToken = previous();
+    consume(TokenType::LEFT_PAREN, "expected '(' after 'thalaivaa'");
+    auto subject = expression();
+    consume(TokenType::RIGHT_PAREN, "expected ')' after thalaivaa subject");
+    consume(TokenType::LEFT_BRACE, "expected '{' before thalaivaa body");
+
+    auto stmt = std::make_unique<SwitchStmt>();
+    stmt->span = thalaivaaToken.span;
+    stmt->subject = std::move(subject);
+
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        if (match(TokenType::VAZHAKKU)) {
+            SwitchStmt::Case caseEntry;
+            caseEntry.value = expression();
+            consume(TokenType::COLON, "expected ':' after vazhakku case value");
+            caseEntry.body = blockStatement();
+            stmt->cases.push_back(std::move(caseEntry));
+        } else if (match(TokenType::ILLANA)) {
+            consume(TokenType::COLON, "expected ':' after illana default case");
+            if (stmt->defaultBody) {
+                addError(previous(), "duplicate illana default case in thalaivaa block");
+            }
+            stmt->defaultBody = blockStatement();
+        } else {
+            Token t = peek();
+            addError(t, "expected 'vazhakku' case or 'illana' default inside thalaivaa block");
+            advance();
+        }
+    }
+
+    consume(TokenType::RIGHT_BRACE, "expected '}' after thalaivaa block");
     return stmt;
 }
 
@@ -751,24 +904,35 @@ std::unique_ptr<ThrowStmt> Parser::throwStatement() {
 std::unique_ptr<TryCatchStmt> Parser::tryCatchStatement() {
     Token pokkiriToken = previous();
     auto tryBody = blockStatement();
-    
-    consume(TokenType::KAAVALAN, "expected 'kaavalan' after try block");
-    consume(TokenType::LEFT_PAREN, "expected '(' after 'kaavalan'");
-    // Expected: Error type and variable name (e.g. Error e) or just variable name
-    Token errorType = consume(TokenType::IDENTIFIER, "expected Exception/Error type or name");
-    Token varName = errorType;
-    if (check(TokenType::IDENTIFIER)) {
-        varName = advance();
-    }
-    consume(TokenType::RIGHT_PAREN, "expected ')' after exception variable");
-
-    auto catchBody = blockStatement();
 
     auto stmt = std::make_unique<TryCatchStmt>();
     stmt->span = pokkiriToken.span;
     stmt->tryBody = std::move(tryBody);
-    stmt->catchVarName = varName.value;
-    stmt->catchBody = std::move(catchBody);
+
+    // Optional catch: kaavalan (Type var) { ... }  or  kaavalan (var) { ... }
+    if (match(TokenType::KAAVALAN)) {
+        consume(TokenType::LEFT_PAREN, "expected '(' after 'kaavalan'");
+        Token errorType = consume(TokenType::IDENTIFIER, "expected exception type or variable name");
+        Token varName = errorType;
+        if (check(TokenType::IDENTIFIER)) {
+            // Two identifiers => "<Type> <var>": filter the catch by type.
+            varName = advance();
+            stmt->catchTypeName = errorType.value;
+        }
+        consume(TokenType::RIGHT_PAREN, "expected ')' after exception variable");
+        stmt->catchVarName = varName.value;
+        stmt->catchBody = blockStatement();
+    }
+
+    // Optional finally: kadaisi { ... }
+    if (match(TokenType::KADAISI)) {
+        stmt->finallyBody = blockStatement();
+    }
+
+    if (!stmt->catchBody && !stmt->finallyBody) {
+        addError(pokkiriToken, "pokkiri block needs a 'kaavalan' catch or a 'kadaisi' finally");
+    }
+
     return stmt;
 }
 
@@ -849,16 +1013,25 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
             return expr;
         }
         case TokenType::SOLLU:
-        case TokenType::IDENTIFIER: {
+        case TokenType::IDENTIFIER:
+        // Built-in conversion functions share names with type keywords.
+        case TokenType::INT_TYPE:
+        case TokenType::FLOAT_TYPE:
+        case TokenType::STRING_TYPE:
+        case TokenType::BOOL_TYPE:
+        case TokenType::CHAR_TYPE: {
             auto expr = std::make_unique<IdentifierExpr>();
             expr->span = token.span;
-            expr->name = token.value.empty() ? "sollu" : token.value;
+            expr->name = token.value.empty() ? std::string(tokenTypeToString(token.type)) : token.value;
             return expr;
         }
         case TokenType::THIS: {
             auto expr = std::make_unique<ThisExpr>();
             expr->span = token.span;
             return expr;
+        }
+        case TokenType::KUTTY: {
+            return lambdaExpression(token);
         }
         case TokenType::SUPER: {
             consume(TokenType::DOT, "expected '.' after 'super'");
@@ -895,10 +1068,10 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
             expr->span = token.span;
             if (!check(TokenType::RIGHT_BRACE)) {
                 do {
-                    Token keyToken = consume(TokenType::IDENTIFIER, "expected map key identifier");
+                    std::string key = consumeNameLike("expected map key identifier");
                     consume(TokenType::COLON, "expected ':' after map key");
                     auto value = expression();
-                    expr->entries.push_back(std::make_pair(keyToken.value, std::move(value)));
+                    expr->entries.push_back(std::make_pair(key, std::move(value)));
                 } while (match(TokenType::COMMA));
             }
             consume(TokenType::RIGHT_BRACE, "expected '}' to close map literal");
@@ -921,6 +1094,50 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
             addError(token, "unexpected expression start");
             return nullptr;
     }
+}
+
+std::unique_ptr<ASTNode> Parser::lambdaExpression(const Token& kuttyToken) {
+    // Syntax: kutty (params) [-> retType] { body }
+    // Parameters may be typed (int a) or untyped (a -> inferred 'any').
+    consume(TokenType::LEFT_PAREN, "expected '(' after 'kutty'");
+
+    auto funcNode = std::make_unique<FuncDecl>();
+    funcNode->span = kuttyToken.span;
+    funcNode->name = "<kutty>";
+
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            Token first = advance();
+            FuncDecl::Param p{"", "any", nullptr};
+            if (check(TokenType::IDENTIFIER)) {
+                // typed parameter: <type> <name>
+                Token paramName = advance();
+                p.name = paramName.value;
+                p.typeStr = first.value;
+            } else {
+                // untyped parameter: just <name>
+                p.name = first.value;
+            }
+            if (match(TokenType::EQUAL)) {
+                p.defaultValue = std::shared_ptr<ASTNode>(expression().release());
+            }
+            funcNode->params.push_back(std::move(p));
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "expected ')' after kutty parameters");
+
+    if (match(TokenType::ARROW)) {
+        funcNode->returnTypeStr = parseTypeString();
+    } else {
+        funcNode->returnTypeStr = "any";
+    }
+
+    funcNode->body = blockStatement();
+
+    auto lambda = std::make_unique<LambdaExpr>();
+    lambda->span = kuttyToken.span;
+    lambda->fn = std::move(funcNode);
+    return lambda;
 }
 
 std::unique_ptr<ASTNode> Parser::parseInfix(const Token& token, std::unique_ptr<ASTNode> left) {
@@ -975,11 +1192,11 @@ std::unique_ptr<ASTNode> Parser::parseInfix(const Token& token, std::unique_ptr<
 
         // Dot Access (Member access)
         case TokenType::DOT: {
-            Token memberToken = consume(TokenType::IDENTIFIER, "expected member identifier name");
+            std::string memberName = consumeNameLike("expected member identifier name");
             auto expr = std::make_unique<MemberExpr>();
             expr->span = token.span;
             expr->object = std::move(left);
-            expr->memberName = memberToken.value;
+            expr->memberName = memberName;
             return expr;
         }
 
@@ -1014,6 +1231,19 @@ std::unique_ptr<ASTNode> Parser::parseInfix(const Token& token, std::unique_ptr<
             expr->span = token.span;
             expr->expression = std::move(left);
             expr->targetType = typeName;
+            return expr;
+        }
+
+        // Ternary conditional: cond ? whenTrue : whenFalse
+        case TokenType::QUESTION: {
+            auto thenExpr = expression(Precedence::ASSIGNMENT);
+            consume(TokenType::COLON, "expected ':' in ternary expression");
+            auto elseExpr = expression(Precedence::ASSIGNMENT);
+            auto expr = std::make_unique<TernaryExpr>();
+            expr->span = token.span;
+            expr->condition = std::move(left);
+            expr->thenExpr = std::move(thenExpr);
+            expr->elseExpr = std::move(elseExpr);
             return expr;
         }
 
@@ -1063,6 +1293,8 @@ Precedence Parser::getPrecedence(TokenType type) const {
             return Precedence::UNARY; // treated as unary/postfix high precedence
         case TokenType::AAGUMA:
             return Precedence::COMPARISON;
+        case TokenType::QUESTION:
+            return Precedence::TERNARY;
         case TokenType::AS:
             return Precedence::AS_CAST;
         case TokenType::DOT:

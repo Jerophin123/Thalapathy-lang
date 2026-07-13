@@ -1,0 +1,17 @@
+// hero.tvk — package: app.models
+// Oru data model class, Java-style package-la amaikapattadhu.
+nadu app.models;
+
+master Hero {
+    string name;
+    string movie;
+
+    mersal init(string n, string m) {
+        this.name = n;
+        this.movie = m;
+    }
+
+    mersal card() -> string {
+        thiruppi this.name + " — '" + this.movie + "'";
+    }
+}

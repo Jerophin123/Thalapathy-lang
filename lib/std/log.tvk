@@ -1,0 +1,18 @@
+// log.tvk - Timestamped logging (INFO/WARN/ERROR/DEBUG)
+// "Nadandhathai ellaam pathivu pannu — history mukkiyam da nanba." 📝
+
+mersal seidhi(string msg) {
+    __native_log("INFO", msg);
+}
+
+mersal eccharikkai(string msg) {
+    __native_log("WARN", msg);
+}
+
+mersal pizhai(string msg) {
+    __native_log("ERROR", msg);
+}
+
+mersal vivaram(string msg) {
+    __native_log("DEBUG", msg);
+}

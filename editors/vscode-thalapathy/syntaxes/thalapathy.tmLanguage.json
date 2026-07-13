@@ -33,11 +33,11 @@
             "patterns": [
                 {
                     "name": "keyword.control.tvk",
-                    "match": "\\b(ghilli|illana|bigil|vaathi|thiruppi|theri|pokkiri|kaavalan|break|continue|waiting)\\b"
+                    "match": "\\b(ghilli|illana|bigil|vaathi|thuppakki|thalaivaa|vazhakku|thiruppi|theri|pokkiri|kaavalan|kadaisi|break|continue|waiting)\\b"
                 },
                 {
                     "name": "keyword.declaration.tvk",
-                    "match": "\\b(thalapathy|aarambam|nanba|makkal|uruthi|mersal|master|varisu|sarkar|beast|leo|goat|kaththi)\\b"
+                    "match": "\\b(thalapathy|aarambam|nanba|makkal|uruthi|mersal|kutty|master|varisu|sarkar|nadu|vagai|beast|leo|goat|kaththi|seyal|paaru|maathu|static|operator)\\b"
                 },
                 {
                     "name": "storage.type.tvk",
@@ -48,8 +48,12 @@
                     "match": "\\b(true|false|this|super)\\b"
                 },
                 {
+                    "name": "keyword.operator.word.tvk",
+                    "match": "\\b(as|aaguma|in)\\b"
+                },
+                {
                     "name": "support.function.tvk",
-                    "match": "\\b(sollu|range|len|type|string|int|float)\\b"
+                    "match": "\\b(sollu|range|len|type|string|int|float|bool|char)\\b"
                 }
             ]
         },
@@ -91,6 +95,6 @@
                 }
             ]
         }
-    ],
+    },
     "scopeName": "source.tvk"
 }

@@ -1,0 +1,13 @@
+{
+    "iconDefinitions": {
+        "thalapathy-icon": {
+            "iconPath": "../icon.svg"
+        }
+    },
+    "fileExtensions": {
+        "tvk": "thalapathy-icon"
+    },
+    "languageIds": {
+        "thalapathy": "thalapathy-icon"
+    }
+}

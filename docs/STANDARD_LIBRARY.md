@@ -7,9 +7,21 @@ The THALAPATHY Development Kit (TDK) distributes a standard library containing u
 ## Standard Modules
 
 ### 1. `io` (`sarkar io;`)
-Provides basic standard input and output utilities.
-- `ezhudhu(string msg)`: Writes string to stdout.
-- `vaasi()`: Reads a line from stdin.
+Provides basic standard input, output, and token parsing utilities.
+- **Dialogue Entry Streams**:
+  - `kettutu_varanum`: Standard Input Entry (from *"Entry-ah dhaan kettutu varanum"*).
+  - `nammakku_pudicha_madhiri`: Standard Output Entry (from *"Exit nammakku pudicha madhiri"*).
+- **Functions**:
+  - `ezhudhu(string msg)`: Writes string to standard output.
+  - `vaasi()`: Reads a line from standard input.
+- **Classes**:
+  - `Scanner`: Token parser for streams.
+    - `init(any source)`: Initializes the scanner with an input source (e.g. `kettutu_varanum`).
+    - `hasNext() -> bool`: Returns `true` if there are more whitespace-separated tokens.
+    - `next() -> string`: Returns the next string token.
+    - `nextInt() -> int`: Returns the next integer token.
+    - `nextFloat() -> float`: Returns the next float token.
+    - `nextLine() -> string`: Clears the current token buffer and reads the next full line from the source.
 
 ### 2. `math` (`sarkar math;`)
 Provides mathematical utility functions.

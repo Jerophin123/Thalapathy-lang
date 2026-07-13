@@ -365,8 +365,17 @@ The resolution module graph uses strict tracking states to catch circular import
 ## 11. Standard Library Reference
 
 ### 1. `io` (`sarkar io;`)
+- **`kettutu_varanum`** (InputEntry): Standard input stream (from *"Entry-ah dhaan kettutu varanum"*).
+- **`nammakku_pudicha_madhiri`** (OutputEntry): Standard output stream (from *"Exit nammakku pudicha madhiri"*).
 - **`ezhudhu(string msg)`**: Writes string to standard output.
 - **`vaasi() -> string`**: Reads a line of input from standard input.
+- **`Scanner`** (Class): Token parser wrapper around an input source stream:
+  - **`init(any source)`**: Binds the scanner to the input source.
+  - **`hasNext() -> bool`**: Returns true if there is another token to scan.
+  - **`next() -> string`**: Returns the next word token.
+  - **`nextInt() -> int`**: Returns the next integer token.
+  - **`nextFloat() -> float`**: Returns the next float token.
+  - **`nextLine() -> string`**: Clears the buffer and reads the next line.
 
 ### 2. `math` (`sarkar math;`)
 - **`abs(float x) -> float`**: Returns absolute value.

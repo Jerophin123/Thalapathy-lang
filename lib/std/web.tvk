@@ -1,0 +1,155 @@
+// web.tvk - THALAPATHY 'Sarkar' backend web framework
+// "Naan oru thadava sonna, nooru thadava sonna maadhiri — server always ready da." 🔥
+//
+// Spring Boot maadhiri routing + middleware:
+//   sarkar web;
+//   nanba app = router();
+//   app.get("/makkal/:id", kutty (req) {
+//       thiruppi reply_json({ id: req["params"]["id"] });
+//   });
+//   thalapathy aarambam { serve(8080, app_handler(app)); }
+
+// ---- Low-level server + response helpers ----
+
+// Blocking HTTP server on `port`. handler(req) -> response (string or map).
+mersal serve(int port, any handler) -> bool {
+    thiruppi __native_http_serve(port, handler);
+}
+
+// 200 OK, HTML body.
+mersal reply_ok(string body) -> any {
+    thiruppi { status: 200, body: body, contentType: "text/html" };
+}
+
+// 200 OK, JSON body serialised from any value.
+mersal reply_json(any obj) -> any {
+    thiruppi { status: 200, body: __native_json_stringify(obj), contentType: "application/json" };
+}
+
+// JSON body with a custom status code (created, not-found, etc).
+mersal reply_json_status(int code, any obj) -> any {
+    thiruppi { status: code, body: __native_json_stringify(obj), contentType: "application/json" };
+}
+
+// Custom status code with a plain/HTML body.
+mersal reply_status(int code, string body) -> any {
+    thiruppi { status: code, body: body, contentType: "text/html" };
+}
+
+// ---- Request helpers ----
+
+// "a=1&b=vijay" -> { a: "1", b: "vijay" }
+mersal parse_query(string q) -> any {
+    makkal result = {};
+    ghilli (q == "") {
+        thiruppi result;
+    }
+    nanba pairs = q.split("&");
+    bigil (makkal i = 0; i < len(pairs); i = i + 1) {
+        nanba kv = pairs[i].split("=");
+        ghilli (len(kv) == 2) {
+            result[kv[0]] = kv[1];
+        }
+    }
+    thiruppi result;
+}
+
+// Parse the request body as JSON.
+mersal body_json(any req) -> any {
+    thiruppi __native_json_parse(req["body"]);
+}
+
+// ---- Router (Spring-style) ----
+
+master Router {
+    beast any routes;
+    beast any middlewares;
+
+    mersal init() {
+        this.routes = [];
+        this.middlewares = [];
+    }
+
+    // Ellaa request-kum munnaadi odra middleware. null thiruppina thodarum;
+    // response thiruppina angeye niruthidum.
+    mersal use(any fn) {
+        this.middlewares.push(fn);
+    }
+
+    mersal add(string method, string path, any handler) {
+        this.routes.push({ method: method, path: path, handler: handler });
+    }
+
+    mersal get(string path, any handler) {
+        this.add("GET", path, handler);
+    }
+
+    mersal post(string path, any handler) {
+        this.add("POST", path, handler);
+    }
+
+    mersal put(string path, any handler) {
+        this.add("PUT", path, handler);
+    }
+
+    // 'delete' verb — route neekkurathukku.
+    mersal del(string path, any handler) {
+        this.add("DELETE", path, handler);
+    }
+
+    // Route path-um request path-um porundhutha nu paaru; :param-ah params-la podu.
+    mersal match(string routePath, string reqPath, any params) -> bool {
+        nanba rp = routePath.split("/");
+        nanba qp = reqPath.split("/");
+        ghilli (len(rp) != len(qp)) {
+            thiruppi false;
+        }
+        bigil (makkal i = 0; i < len(rp); i = i + 1) {
+            nanba seg = rp[i];
+            ghilli (seg.startsWith(":")) {
+                nanba key = seg.substring(1);
+                params[key] = qp[i];
+            } illana {
+                ghilli (seg != qp[i]) {
+                    thiruppi false;
+                }
+            }
+        }
+        thiruppi true;
+    }
+
+    // Request-ah porutha handler-ku anuppu.
+    mersal dispatch(any req) -> any {
+        bigil (makkal m = 0; m < len(this.middlewares); m = m + 1) {
+            nanba mw = this.middlewares[m];
+            nanba res = mw(req);
+            ghilli (res != null) {
+                thiruppi res;
+            }
+        }
+        bigil (makkal i = 0; i < len(this.routes); i = i + 1) {
+            nanba route = this.routes[i];
+            ghilli (route["method"] == req["method"]) {
+                makkal params = {};
+                ghilli (this.match(route["path"], req["path"], params)) {
+                    req["params"] = params;
+                    nanba handler = route["handler"];
+                    thiruppi handler(req);
+                }
+            }
+        }
+        thiruppi reply_json_status(404, { pizhai: "Intha route kaanom da nanba", vazhi: req["path"] });
+    }
+}
+
+// Pudhu router uruvaakku.
+mersal router() -> any {
+    thiruppi Router();
+}
+
+// Router-ah serve()-ku kudukkura handler-ah maathu.
+mersal app_handler(any app) -> any {
+    thiruppi kutty (req) {
+        thiruppi app.dispatch(req);
+    };
+}

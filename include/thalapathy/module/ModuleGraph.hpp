@@ -21,6 +21,7 @@ private:
 
     std::unordered_map<std::string, std::unique_ptr<ModuleRecord>> modules;
     std::vector<std::string> loadOrder;
+    std::string entryRootDir; // project/source root for dotted package imports
 };
 
 } // namespace thalapathy

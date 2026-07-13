@@ -338,6 +338,11 @@ IRGenerator::IRGenerator() {}
 ModuleIR IRGenerator::generate(const std::vector<std::unique_ptr<ASTNode>>& nodes) {
     ir.constantPool.clear();
     ir.instructions.clear();
+    ir.classes.clear();
+    ir.interfaces.clear();
+    ir.properties.clear();
+    ir.methods.clear();
+    ir.types.clear();
     localVariables.clear();
     nextLocalIndex = 0;
 
@@ -374,14 +379,58 @@ void IRGenerator::visit(VarDecl* node) {
 }
 
 void IRGenerator::visit(FuncDecl* node) {
-    // Generate inner instructions for functions
+    ModuleIR::MethodMetadata mm;
+    mm.name = node->name;
+    mm.returnType = node->returnTypeStr;
+    for (const auto& p : node->params) {
+        mm.paramTypes.push_back(p.typeStr);
+    }
+    ir.methods.push_back(mm);
+
     node->body->accept(this);
 }
 
 void IRGenerator::visit(ClassDecl* node) {
+    ModuleIR::ClassMetadata c;
+    c.name = node->name;
+    c.parentName = node->parentName;
+    c.implementedInterfaces = node->implementedInterfaces;
+
+    for (const auto& f : node->fields) {
+        if (f->varDecl) {
+            c.fields.push_back(f->varDecl->name);
+            ModuleIR::PropertyMetadata pm;
+            pm.name = f->varDecl->name;
+            pm.typeStr = f->varDecl->typeStr;
+            pm.hasGetter = false;
+            pm.hasSetter = false;
+            ir.properties.push_back(pm);
+        }
+    }
+
     for (const auto& m : node->methods) {
+        if (m->funcDecl) {
+            c.methods.push_back(m->funcDecl->name);
+        }
         m->accept(this);
     }
+
+    for (const auto& p : node->properties) {
+        c.properties.push_back(p->name);
+
+        ModuleIR::PropertyMetadata pm;
+        pm.name = p->name;
+        pm.typeStr = p->typeStr;
+        pm.hasGetter = (p->getterBody != nullptr);
+        pm.hasSetter = (p->setterBody != nullptr);
+        ir.properties.push_back(pm);
+
+        if (p->getterBody) p->getterBody->accept(this);
+        if (p->setterBody) p->setterBody->accept(this);
+    }
+
+    ir.classes.push_back(c);
+    ir.types.push_back(node->name);
 }
 
 void IRGenerator::visit(EntryBlockDecl* node) {
@@ -472,6 +521,48 @@ void IRGenerator::visit(RangeLoopStmt* node) {
     ir.instructions[exitJump].operand = static_cast<uint32_t>(ir.instructions.size());
 }
 
+void IRGenerator::visit(ForEachStmt* node) {
+    // Emit the iterable and body; detailed foreach lowering is handled by the interpreter.
+    node->iterable->accept(this);
+    ir.instructions.push_back(Instruction{OpCode::POP, 0});
+    node->body->accept(this);
+}
+
+void IRGenerator::visit(WhileStmt* node) {
+    size_t loopStart = ir.instructions.size();
+    node->condition->accept(this);
+    size_t exitJumpIdx = ir.instructions.size();
+    ir.instructions.push_back(Instruction{OpCode::JUMP_IF_FALSE, 0});
+
+    node->body->accept(this);
+
+    ir.instructions.push_back(Instruction{OpCode::JUMP, static_cast<uint32_t>(loopStart)});
+    ir.instructions[exitJumpIdx].operand = static_cast<uint32_t>(ir.instructions.size());
+}
+
+void IRGenerator::visit(SwitchStmt* node) {
+    node->subject->accept(this);
+    std::vector<size_t> endJumps;
+    for (const auto& c : node->cases) {
+        // duplicate subject, compare against case value
+        c.value->accept(this);
+        ir.instructions.push_back(Instruction{OpCode::EQ, 0});
+        size_t skipIdx = ir.instructions.size();
+        ir.instructions.push_back(Instruction{OpCode::JUMP_IF_FALSE, 0});
+        c.body->accept(this);
+        endJumps.push_back(ir.instructions.size());
+        ir.instructions.push_back(Instruction{OpCode::JUMP, 0});
+        ir.instructions[skipIdx].operand = static_cast<uint32_t>(ir.instructions.size());
+    }
+    if (node->defaultBody) {
+        node->defaultBody->accept(this);
+    }
+    for (size_t j : endJumps) {
+        ir.instructions[j].operand = static_cast<uint32_t>(ir.instructions.size());
+    }
+    ir.instructions.push_back(Instruction{OpCode::POP, 0});
+}
+
 void IRGenerator::visit(ReturnStmt* node) {
     if (node->expression) {
         node->expression->accept(this);
@@ -527,7 +618,36 @@ void IRGenerator::visit(IdentifierExpr* node) {
     }
 }
 
+// Constant folding: if both operands are integer literals and the operator is
+// arithmetic, evaluate at compile time and emit a single constant.
+static bool tryFoldIntLiterals(ASTNode* leftN, ASTNode* rightN, TokenType op, long long& out) {
+    auto lit = [](ASTNode* n, long long& v) -> bool {
+        auto* l = dynamic_cast<LiteralExpr*>(n);
+        if (!l) return false;
+        if (auto p = std::get_if<long long>(&l->value)) { v = *p; return true; }
+        return false;
+    };
+    long long a, b;
+    if (!lit(leftN, a) || !lit(rightN, b)) return false;
+    switch (op) {
+        case TokenType::PLUS:  out = a + b; return true;
+        case TokenType::MINUS: out = a - b; return true;
+        case TokenType::STAR:  out = a * b; return true;
+        case TokenType::SLASH: if (b == 0) return false; out = a / b; return true;
+        case TokenType::PERCENT: if (b == 0) return false; out = a % b; return true;
+        default: return false;
+    }
+}
+
 void IRGenerator::visit(BinaryExpr* node) {
+    // Optimizer pass: fold constant integer arithmetic.
+    long long folded = 0;
+    if (tryFoldIntLiterals(node->left.get(), node->right.get(), node->op, folded)) {
+        uint32_t idx = addConstant(folded);
+        ir.instructions.push_back(Instruction{OpCode::LOAD_CONST, idx});
+        return;
+    }
+
     node->left->accept(this);
     node->right->accept(this);
     OpCode op = OpCode::ADD;
@@ -604,6 +724,13 @@ void IRGenerator::visit(MapExpr* node) {
     }
 }
 
+void IRGenerator::visit(LambdaExpr* node) {
+    // Emit the lambda body inline; runtime closure creation is handled by the interpreter.
+    if (node->fn && node->fn->body) {
+        node->fn->body->accept(this);
+    }
+}
+
 void IRGenerator::visit(ThisExpr*) {
     // loads current class this
 }
@@ -638,8 +765,22 @@ void IRGenerator::visit(OperatorDecl* node) {
     }
 }
 
-void IRGenerator::visit(InterfaceDecl*) {
-    // Interface declarations are metadata-only in IR
+void IRGenerator::visit(InterfaceDecl* node) {
+    ModuleIR::InterfaceMetadata im;
+    im.name = node->name;
+    for (const auto& m : node->methodSignatures) {
+        im.methods.push_back(m->name);
+        
+        ModuleIR::MethodMetadata mm;
+        mm.name = m->name;
+        mm.returnType = m->returnTypeStr;
+        for (const auto& p : m->params) {
+            mm.paramTypes.push_back(p.typeStr);
+        }
+        ir.methods.push_back(mm);
+    }
+    ir.interfaces.push_back(im);
+    ir.types.push_back(node->name);
 }
 
 void IRGenerator::visit(CastExpr* node) {
@@ -654,6 +795,26 @@ void IRGenerator::visit(TypeTestExpr* node) {
 
 void IRGenerator::visit(ImportDecl*) {
     // ImportDecl is processed at the module graph driver level.
+}
+
+void IRGenerator::visit(PackageDecl*) {
+    // Package declarations are organizational metadata; no IR emitted.
+}
+
+void IRGenerator::visit(EnumDecl* node) {
+    ir.types.push_back(node->name);
+}
+
+void IRGenerator::visit(TernaryExpr* node) {
+    node->condition->accept(this);
+    size_t jumpFalse = ir.instructions.size();
+    ir.instructions.push_back(Instruction{OpCode::JUMP_IF_FALSE, 0});
+    node->thenExpr->accept(this);
+    size_t jumpEnd = ir.instructions.size();
+    ir.instructions.push_back(Instruction{OpCode::JUMP, 0});
+    ir.instructions[jumpFalse].operand = static_cast<uint32_t>(ir.instructions.size());
+    node->elseExpr->accept(this);
+    ir.instructions[jumpEnd].operand = static_cast<uint32_t>(ir.instructions.size());
 }
 
 } // namespace thalapathy

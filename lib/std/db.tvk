@@ -1,0 +1,56 @@
+// db.tvk - VijayDB embedded document database
+// "Data-va paathukkarathu leader oda velai — save aagum, thediyum edukkalam da nanba." 🗄️🔥
+//
+// Usage:
+//   sarkar db;
+//   nanba store = open("app.db");
+//   nanba user = store.insert("makkal", { name: "Vijay", age: 50 });
+//   nanba found = store.find("makkal", "name", "Vijay");
+
+master Database {
+    beast int handle;
+
+    mersal init(string path) {
+        this.handle = __native_db_open(path);
+    }
+
+    // Oru document-ah collection-la serthu, _id kuduthu thiruppu.
+    mersal insert(string collection, any doc) -> any {
+        thiruppi __native_db_insert(this.handle, collection, doc);
+    }
+
+    // Collection-la irukkura ella document-ah edu.
+    mersal all(string collection) -> any {
+        thiruppi __native_db_all(this.handle, collection);
+    }
+
+    // Oru field value-ku porundhura documents-ah thedi edu.
+    mersal find(string collection, string field, any value) -> any {
+        thiruppi __native_db_find(this.handle, collection, field, value);
+    }
+
+    // _id vachu oru document-ah edu.
+    mersal get(string collection, int id) -> any {
+        thiruppi __native_db_get(this.handle, collection, id);
+    }
+
+    // _id vachu document fields-ah maathu.
+    mersal update(string collection, int id, any patch) -> bool {
+        thiruppi __native_db_update(this.handle, collection, id, patch);
+    }
+
+    // _id vachu document-ah neekku.
+    mersal remove(string collection, int id) -> bool {
+        thiruppi __native_db_remove(this.handle, collection, id);
+    }
+
+    // Collection-la ethana document irukkunu enni sollu.
+    mersal count(string collection) -> int {
+        thiruppi __native_db_count(this.handle, collection);
+    }
+}
+
+// Oru database-ah thira (illana pudhusa uruvaakku).
+mersal open(string path) -> any {
+    thiruppi Database(path);
+}

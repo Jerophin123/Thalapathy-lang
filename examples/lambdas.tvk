@@ -1,0 +1,24 @@
+// lambdas.tvk - kutty (anonymous functions) + higher-order collection methods
+
+thalapathy aarambam {
+    // A kutty is a first-class anonymous function (closure).
+    nanba twice = kutty (int x) -> int { thiruppi x * 2; };
+    sollu("twice(21) = " + string(twice(21)));
+
+    nanba nums = [1, 2, 3, 4, 5, 6];
+
+    // map / filter / reduce accept kutty callbacks.
+    nanba squares = nums.map(kutty (n) { thiruppi n * n; });
+    sollu("squares = " + squares.join(", "));
+
+    nanba evens = nums.filter(kutty (n) { thiruppi n % 2 == 0; });
+    sollu("evens = " + evens.join(", "));
+
+    nanba total = nums.reduce(kutty (acc, n) { thiruppi acc + n; }, 0);
+    sollu("sum = " + string(total));
+
+    // Closures capture their defining scope.
+    nanba base = 100;
+    nanba addBase = kutty (n) { thiruppi n + base; };
+    sollu("addBase(7) = " + string(addBase(7)));
+}

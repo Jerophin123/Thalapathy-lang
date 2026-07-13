@@ -5,14 +5,21 @@
 The main language driver.
 
 ```
-thalapathy <file.tvk>              Run a THALAPATHY program
-thalapathy --check <file.tvk>      Semantic verification only
-thalapathy --build <file.tvk>      Compile to .vijay artifact
-thalapathy --emit-ir <file.tvk>    Emit THALA IR to stdout
+thalapathy <file>                  Run a THALAPATHY program
+thalapathy --check <file>          Semantic verification only
+thalapathy --build <file>          Compile to .vijay artifact
+thalapathy --emit-ir <file>        Emit THALA IR to stdout
 thalapathy --repl                  Start interactive REPL
 thalapathy --version               Print version information
 thalapathy --help                  Print usage help
 ```
+
+### Target Path Resolution
+When running files, `thalapathy` supports the following paths:
+- **Raw source file**: `thalapathy app.tvk`
+- **Extensionless name**: `thalapathy app` (checks and executes `app.tvk` or `app.vijay` transparently)
+- **Bytecode target**: `thalapathy app.vijay` (transparently resolves to adjacent source `app.tvk` for execution)
+
 
 ### Options
 - `--mode <professional|mass|political-parody>` — Set personality mode

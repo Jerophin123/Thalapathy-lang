@@ -1,0 +1,17 @@
+// regex.tvk - Pattern matching helpers (ECMAScript regex)
+// "Pattern-ah paaru da nanba — sariyaana idathula pudichiduven." 🔍
+
+// Pattern text-la irukka nu true/false thiruppu.
+mersal porundhu(string text, string pattern) -> bool {
+    thiruppi __native_regex_match(text, pattern);
+}
+
+// Ellaa match-aiyum array-a thiruppu.
+mersal ellam(string text, string pattern) -> any {
+    thiruppi __native_regex_find_all(text, pattern);
+}
+
+// Pattern-ah maathi pudhu string thiruppu.
+mersal pathil(string text, string pattern, string replacement) -> string {
+    thiruppi __native_regex_replace(text, pattern, replacement);
+}

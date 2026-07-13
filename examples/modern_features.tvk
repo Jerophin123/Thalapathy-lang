@@ -1,0 +1,44 @@
+// modern_features.tvk — enums, foreach, ternary, default params, finally
+// "Modern language-ku venumna ellaam THALAPATHY-la irukku da nanba." 🔥
+
+vagai Grade { PASS, FAIL, GOAT }
+
+mersal vaazhthu(string per, string mudivu = "da nanba") -> string {
+    thiruppi "Vanakkam " + per + " " + mudivu;
+}
+
+mersal tharam(int mark) -> any {
+    thiruppi mark >= 90 ? Grade.GOAT : (mark >= 40 ? Grade.PASS : Grade.FAIL);
+}
+
+thalapathy aarambam {
+    nanba names = ["Vijay", "Sethupathi", "Trisha"];
+
+    // foreach over an array
+    vaathi per in names {
+        sollu(vaazhthu(per));
+    }
+
+    // default parameter used
+    sollu(vaazhthu("Master"));
+
+    // enum + ternary + switch
+    nanba marks = [95, 55, 20];
+    vaathi m in marks {
+        nanba g = tharam(m);
+        thalaivaa (g) {
+            vazhakku Grade.GOAT: { sollu(string(m) + " -> GOAT raja! 🐐"); }
+            vazhakku Grade.PASS: { sollu(string(m) + " -> Pass aayiten."); }
+            illana:              { sollu(string(m) + " -> Marumurai varen."); }
+        }
+    }
+
+    // exceptions with finally
+    pokkiri {
+        theri "stor e access fail";
+    } kaavalan (e) {
+        sollu("Pizhai pidichitten: " + e);
+    } kadaisi {
+        sollu("Kadaisi-la clean up pannitten.");
+    }
+}

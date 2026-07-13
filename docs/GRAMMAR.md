@@ -1,10 +1,29 @@
 # THALAPATHY Grammar Spec (EBNF)
 
+> Addendum (feature-completion pass). New productions, additive to the base
+> grammar below:
+> ```ebnf
+> package_decl   = "nadu" dotted_name ";" ;
+> import_decl    = "sarkar" dotted_name ";" ;
+> dotted_name    = IDENTIFIER { "." IDENTIFIER } ;
+> enum_decl      = "vagai" IDENTIFIER "{" [ IDENTIFIER { "," IDENTIFIER } [ "," ] ] "}" ;
+> foreach_stmt   = "vaathi" IDENTIFIER "in" ( range_call | expression ) statement ;
+> while_stmt     = "thuppakki" "(" expression ")" statement ;
+> switch_stmt    = "thalaivaa" "(" expression ")" "{" { "vazhakku" expression ":" block } [ "illana" ":" block ] "}" ;
+> try_stmt       = "pokkiri" block [ "kaavalan" "(" [ IDENTIFIER ] IDENTIFIER ")" block ] [ "kadaisi" block ] ;
+> lambda_expr    = "kutty" "(" [ param { "," param } ] ")" [ "->" type ] block ;
+> param          = [ type ] IDENTIFIER [ "=" expression ] ;   (* default value *)
+> ternary_expr   = expression "?" expression ":" expression ;
+> ```
+
 ```ebnf
 program             = { declaration } ;
 
 declaration         = entry_block
+                    | package_decl
+                    | import_decl
                     | class_decl
+                    | enum_decl
                     | func_decl
                     | var_decl
                     | statement ;

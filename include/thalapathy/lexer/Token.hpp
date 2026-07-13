@@ -39,6 +39,13 @@ enum class TokenType {
     SARKAR,
     WAITING,
     GOAT,
+    THUPPAKKI,
+    THALAIVAA,
+    VAZHAKKU,
+    KUTTY,
+    NADU,
+    VAGAI,
+    KADAISI,
 
     // Conventional technical keywords
     INT_TYPE,
@@ -91,6 +98,7 @@ enum class TokenType {
     SLASH_EQ,
     PLUS_PLUS,
     MINUS_MINUS,
+    QUESTION,
 
     // Punctuation
     SEMICOLON,
@@ -141,6 +149,14 @@ inline std::string_view tokenTypeToString(TokenType type) {
         case TokenType::SARKAR: return "sarkar";
         case TokenType::WAITING: return "waiting";
         case TokenType::GOAT: return "goat";
+        case TokenType::THUPPAKKI: return "thuppakki";
+        case TokenType::THALAIVAA: return "thalaivaa";
+        case TokenType::VAZHAKKU: return "vazhakku";
+        case TokenType::KUTTY: return "kutty";
+        case TokenType::NADU: return "nadu";
+        case TokenType::VAGAI: return "vagai";
+        case TokenType::KADAISI: return "kadaisi";
+        case TokenType::QUESTION: return "?";
         case TokenType::INT_TYPE: return "int";
         case TokenType::FLOAT_TYPE: return "float";
         case TokenType::BOOL_TYPE: return "bool";

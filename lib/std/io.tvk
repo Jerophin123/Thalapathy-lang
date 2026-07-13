@@ -1,9 +1,86 @@
 // io.tvk - Standard I/O module
+// "Entry-ah dhaan kettutu varanum, Exit nammakku pudicha madhiri." 🚪🔥
 
-mersal vaasi() {
-    thiruppi __native_read_line();
+master InputEntry {
+    mersal vaasi() {
+        thiruppi __native_read_line();
+    }
 }
 
-mersal ezhudhu(string msg) {
-    sollu(msg);
+master OutputEntry {
+    mersal ezhudhu(any msg) {
+        sollu(msg);
+    }
+}
+
+makkal kettutu_varanum = InputEntry();
+makkal nammakku_pudicha_madhiri = OutputEntry();
+
+mersal vaasi() {
+    thiruppi kettutu_varanum.vaasi();
+}
+
+mersal ezhudhu(any msg) {
+    nammakku_pudicha_madhiri.ezhudhu(msg);
+}
+
+master Scanner {
+    any source;
+    any buffer;
+    int bufferIdx;
+
+    mersal init(any source) {
+        this.source = source;
+        this.buffer = [];
+        this.bufferIdx = 0;
+    }
+
+    beast mersal fillBuffer() {
+        bigil (; this.bufferIdx >= len(this.buffer);) {
+            makkal line = this.source.vaasi();
+            ghilli (line == null) {
+                thiruppi;
+            }
+            makkal tokens = __native_string_split(line, " ");
+            makkal non_empty_tokens = [];
+            vaathi t in tokens {
+                ghilli (len(t) > 0) {
+                    non_empty_tokens.push(t);
+                }
+            }
+            ghilli (len(non_empty_tokens) > 0) {
+                this.buffer = non_empty_tokens;
+                this.bufferIdx = 0;
+                thiruppi;
+            }
+        }
+    }
+
+    mersal hasNext() -> bool {
+        this.fillBuffer();
+        thiruppi this.bufferIdx < len(this.buffer);
+    }
+
+    mersal next() -> string {
+        ghilli (!this.hasNext()) {
+            thiruppi "";
+        }
+        makkal val = this.buffer[this.bufferIdx];
+        this.bufferIdx = this.bufferIdx + 1;
+        thiruppi val;
+    }
+
+    mersal nextInt() -> int {
+        thiruppi int(this.next());
+    }
+
+    mersal nextFloat() -> float {
+        thiruppi float(this.next());
+    }
+
+    mersal nextLine() -> string {
+        this.buffer = [];
+        this.bufferIdx = 0;
+        thiruppi this.source.vaasi();
+    }
 }

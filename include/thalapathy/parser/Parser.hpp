@@ -10,6 +10,7 @@ namespace thalapathy {
 enum class Precedence {
     NONE,
     ASSIGNMENT,  // = += -= *= /=
+    TERNARY,     // ?:
     OR,          // ||
     AND,         // &&
     EQUALITY,    // == !=
@@ -37,6 +38,7 @@ private:
     Token advance();
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
+    std::string consumeNameLike(const std::string& message);
     void addError(const Token& token, const std::string& message);
     void synchronize();
 
@@ -48,7 +50,9 @@ private:
     std::unique_ptr<ClassDecl> classDeclaration();
     std::unique_ptr<ClassDecl> classDeclaration(bool isAbstractClass, bool isFinalClass);
     std::unique_ptr<InterfaceDecl> interfaceDeclaration();
+    std::unique_ptr<EnumDecl> enumDeclaration();
     std::string parseTypeString();
+    std::string parseDottedName(const std::string& what);
 
     // Statements
     std::unique_ptr<ASTNode> statement();
@@ -56,7 +60,9 @@ private:
     std::unique_ptr<ExprStmt> expressionStatement();
     std::unique_ptr<IfStmt> ifStatement();
     std::unique_ptr<ForStmt> forStatement();
-    std::unique_ptr<RangeLoopStmt> rangeLoopStatement();
+    std::unique_ptr<ASTNode> rangeLoopStatement();
+    std::unique_ptr<WhileStmt> whileStatement();
+    std::unique_ptr<SwitchStmt> switchStatement();
     std::unique_ptr<ReturnStmt> returnStatement();
     std::unique_ptr<ThrowStmt> throwStatement();
     std::unique_ptr<TryCatchStmt> tryCatchStatement();
@@ -66,6 +72,7 @@ private:
     // Expressions (Pratt Parsing)
     std::unique_ptr<ASTNode> expression(Precedence precedence = Precedence::NONE);
     std::unique_ptr<ASTNode> parsePrefix(const Token& token);
+    std::unique_ptr<ASTNode> lambdaExpression(const Token& kuttyToken);
     std::unique_ptr<ASTNode> parseInfix(const Token& token, std::unique_ptr<ASTNode> left);
     Precedence getPrecedence(TokenType type) const;
 

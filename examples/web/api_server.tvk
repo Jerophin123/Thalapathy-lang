@@ -1,0 +1,29 @@
+// api_server.tvk - THALAPATHY 'Sarkar' backend web framework demo
+// Run:  thalapathy examples/web/api_server.tvk
+// Then: curl http://localhost:8080/          (HTML)
+//       curl http://localhost:8080/api/leader (JSON)
+
+sarkar web;
+
+mersal handler(any req) -> any {
+    nanba path = req["path"];
+    thalaivaa (path) {
+        vazhakku "/": {
+            thiruppi reply_ok("<h1>Vaathi vantaachu da nanba! 🔥</h1><p>THALAPATHY Sarkar server.</p>");
+        }
+        vazhakku "/api/leader": {
+            thiruppi reply_json({ name: "Thalapathy Vijay", party: "TVK", movie: "Leo", goat: true });
+        }
+        vazhakku "/api/echo": {
+            thiruppi reply_json({ method: req["method"], you_sent: req["body"] });
+        }
+        illana: {
+            thiruppi reply_status(404, "Intha route kaanom da nanba! 😜");
+        }
+    }
+}
+
+thalapathy aarambam {
+    // Blocking server — stop with Ctrl+C.
+    serve(8080, handler);
+}

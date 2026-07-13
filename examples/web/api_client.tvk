@@ -1,0 +1,19 @@
+// api_client.tvk - calling a JSON API from THALAPATHY
+// Start api_server.tvk first, then run this file.
+
+sarkar http;
+sarkar json;
+
+thalapathy aarambam {
+    nanba resp = get("http://localhost:8080/api/leader");
+
+    ghilli (resp["success"]) {
+        sollu("Status: " + string(resp["status"]));
+        nanba data = parse(resp["body"]);
+        sollu("Leader: " + data["name"]);
+        sollu("Party:  " + data["party"]);
+        sollu("Movie:  " + data["movie"]);
+    } illana {
+        sollu("Request fail aachu da nanba: " + resp["error"]);
+    }
+}

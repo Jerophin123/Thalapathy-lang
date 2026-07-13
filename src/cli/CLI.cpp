@@ -223,15 +223,37 @@ static const char* getOpcodeName(OpCode op) {
     }
 }
 
-int CLI::executeFile(const std::string& filepath, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput) {
+int CLI::executeFile(const std::string& filepath_orig, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput) {
     (void)mode;
     namespace fs = std::filesystem;
+    std::string filepath = filepath_orig;
     fs::path path(filepath);
 
     if (path.extension() == ".thalac") {
         std::cerr << "error[THALA-ARTIFACT-001]:\nlegacy THALA artifact format is not supported by this TDK version\n\n"
                   << "help:\nrebuild the original `.tvk` source to generate a `.vijay` artifact\n";
         return 1;
+    }
+
+    // Resolve extensionless or .vijay files to .tvk if possible
+    if (path.extension() == "") {
+        if (fs::exists(filepath + ".tvk")) {
+            filepath = filepath + ".tvk";
+            path = fs::path(filepath);
+        } else if (fs::exists(filepath + ".vijay")) {
+            fs::path tvkPath = filepath + ".tvk";
+            if (fs::exists(tvkPath)) {
+                filepath = tvkPath.string();
+                path = tvkPath;
+            }
+        }
+    } else if (path.extension() == ".vijay") {
+        fs::path tvkPath = path;
+        tvkPath.replace_extension(".tvk");
+        if (fs::exists(tvkPath)) {
+            filepath = tvkPath.string();
+            path = tvkPath;
+        }
     }
 
     if (path.extension() != ".tvk") {

@@ -1,0 +1,19 @@
+// http.tvk - HTTP client for calling APIs from THALAPATHY
+// " Meesai vachavan ellaam server call panna maatan, TDK client call pannum." 😎
+//
+// Every call returns a map: { success: bool, status: int, body: string, error: string }
+
+// Fire a GET request. Only http:// URLs are supported (no TLS yet).
+mersal get(string url) -> any {
+    thiruppi __native_http_get(url);
+}
+
+// POST a body (default content-type application/json).
+mersal post(string url, string body) -> any {
+    thiruppi __native_http_post(url, body);
+}
+
+// Full control: choose the verb (GET, POST, PUT, DELETE, ...).
+mersal request(string verb, string url, string body) -> any {
+    thiruppi __native_http_request(verb, url, body);
+}

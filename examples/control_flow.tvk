@@ -1,0 +1,19 @@
+// control_flow.tvk - thuppakki (while) and thalaivaa (switch) demo
+
+thalapathy aarambam {
+    // thuppakki = while loop
+    makkal count = 3;
+    thuppakki (count > 0) {
+        sollu("Countdown: " + string(count));
+        count = count - 1;
+    }
+
+    // thalaivaa = switch, vazhakku = case, illana = default
+    nanba day = 6;
+    thalaivaa (day) {
+        vazhakku 1: { sollu("Vaathi Monday"); }
+        vazhakku 6: { sollu("GOAT Saturday — padam release!"); }
+        vazhakku 7: { sollu("Sunday, matinee first day first show"); }
+        illana:      { sollu("Regular working day da nanba"); }
+    }
+}

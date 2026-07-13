@@ -22,6 +22,13 @@ static std::filesystem::path getExecutablePath() {
 #endif
 }
 
+std::filesystem::path executableDir() {
+    std::error_code ec;
+    auto p = std::filesystem::weakly_canonical(getExecutablePath(), ec);
+    if (ec) return getExecutablePath().parent_path();
+    return p.parent_path();
+}
+
 TdkHomeResult resolveTdkHome() {
     namespace fs = std::filesystem;
 

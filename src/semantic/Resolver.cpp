@@ -41,7 +41,25 @@ Resolver::Resolver(std::string filename_, std::string sourceCode_)
     declare(typeSym);
 
     // built-in conversion functions
-    for (const std::string name : {"string", "int", "float", "__native_read_line", "__native_time_now"}) {
+    for (const std::string name : {
+            "string", "int", "float", "bool", "char",
+            "__native_read_line", "__native_time_now",
+            "__native_read_file", "__native_write_file", "__native_file_exists",
+            "__native_get_env", "__native_set_env", "__native_sys_command",
+            "__native_math_sqrt", "__native_math_sin", "__native_math_cos",
+            "__native_math_ceil", "__native_math_floor",
+            "__native_string_split", "__native_string_replace",
+            "__native_random", "__native_random_int", "__native_random_seed",
+            "__native_os_name", "__native_os_cwd", "__native_os_exit",
+            "__native_time_millis", "__native_sleep_ms",
+            "__native_json_stringify", "__native_json_parse",
+            "__native_http_get", "__native_http_post", "__native_http_request",
+            "__native_http_serve",
+            "__native_db_open", "__native_db_insert", "__native_db_all",
+            "__native_db_find", "__native_db_get", "__native_db_update",
+            "__native_db_remove", "__native_db_count",
+            "__native_regex_match", "__native_regex_find_all", "__native_regex_replace",
+            "__native_date_format", "__native_date_now_seconds", "__native_log"}) {
         Symbol convSym;
         convSym.name = name;
         convSym.type = Type{TypeKind::FUNCTION, ""};
@@ -153,6 +171,13 @@ bool Resolver::resolve(const std::vector<std::unique_ptr<ASTNode>>& nodes, bool 
             sym.name = funcDecl->name;
             sym.type = Type{TypeKind::FUNCTION, ""};
             sym.kind = SymbolKind::FUNCTION;
+            sym.isMutable = false;
+            declare(sym);
+        } else if (auto enumDecl = dynamic_cast<EnumDecl*>(node.get())) {
+            Symbol sym;
+            sym.name = enumDecl->name;
+            sym.type = Type{TypeKind::CLASS, enumDecl->name};
+            sym.kind = SymbolKind::CLASS;
             sym.isMutable = false;
             declare(sym);
         }
@@ -435,6 +460,47 @@ void Resolver::visit(RangeLoopStmt* node) {
     loopDepth--;
 }
 
+void Resolver::visit(ForEachStmt* node) {
+    node->iterable->accept(this);
+    loopDepth++;
+    beginScope();
+    Symbol loopVar;
+    loopVar.name = node->varName;
+    loopVar.type = Type{TypeKind::ANY, ""};
+    loopVar.kind = SymbolKind::VARIABLE;
+    loopVar.isMutable = false;
+    declare(loopVar);
+    node->body->accept(this);
+    endScope();
+    loopDepth--;
+}
+
+void Resolver::visit(WhileStmt* node) {
+    node->condition->accept(this);
+    if (currentExprType.kind != TypeKind::BOOL && currentExprType.kind != TypeKind::ANY) {
+        reportError("THALA-TYPE-001", "type mismatch", node->condition->span,
+                    "thuppakki condition must be boolean, found '" + typeKindToString(currentExprType.kind) + "'",
+                    "use a comparison or boolean value for the condition");
+    }
+    loopDepth++;
+    node->body->accept(this);
+    loopDepth--;
+}
+
+void Resolver::visit(SwitchStmt* node) {
+    node->subject->accept(this);
+    // A thalaivaa block allows break statements to exit early.
+    loopDepth++;
+    for (const auto& c : node->cases) {
+        c.value->accept(this);
+        c.body->accept(this);
+    }
+    if (node->defaultBody) {
+        node->defaultBody->accept(this);
+    }
+    loopDepth--;
+}
+
 void Resolver::visit(ReturnStmt* node) {
     if (!currentFunction && !insideFunctionLike) {
         reportError("THALA-FUNC-001", "return outside function", node->span,
@@ -465,16 +531,20 @@ void Resolver::visit(ThrowStmt* node) {
 
 void Resolver::visit(TryCatchStmt* node) {
     node->tryBody->accept(this);
-    beginScope();
-    Symbol errSym;
-    errSym.name = node->catchVarName;
-    errSym.type = Type{TypeKind::ANY, ""};
-    errSym.kind = SymbolKind::VARIABLE;
-    errSym.isMutable = false;
-    declare(errSym);
-
-    node->catchBody->accept(this);
-    endScope();
+    if (node->catchBody) {
+        beginScope();
+        Symbol errSym;
+        errSym.name = node->catchVarName;
+        errSym.type = Type{TypeKind::ANY, ""};
+        errSym.kind = SymbolKind::VARIABLE;
+        errSym.isMutable = false;
+        declare(errSym);
+        node->catchBody->accept(this);
+        endScope();
+    }
+    if (node->finallyBody) {
+        node->finallyBody->accept(this);
+    }
 }
 
 void Resolver::visit(BreakStmt* node) {
@@ -726,6 +796,35 @@ void Resolver::visit(MapExpr* node) {
     currentExprType = Type{TypeKind::MAP, ""};
 }
 
+void Resolver::visit(LambdaExpr* node) {
+    FuncDecl* fn = node->fn.get();
+    FuncDecl* prevFunc = currentFunction;
+    bool prevFuncLike = insideFunctionLike;
+    int prevLoopDepth = loopDepth;
+    currentFunction = fn;
+    insideFunctionLike = true;
+    loopDepth = 0;
+
+    beginScope();
+    for (const auto& p : fn->params) {
+        Symbol paramSym;
+        paramSym.name = p.name;
+        paramSym.type = makePrimitiveType(p.typeStr);
+        paramSym.kind = SymbolKind::PARAMETER;
+        paramSym.isMutable = true;
+        declare(paramSym);
+    }
+    if (fn->body) {
+        fn->body->accept(this);
+    }
+    endScope();
+
+    loopDepth = prevLoopDepth;
+    insideFunctionLike = prevFuncLike;
+    currentFunction = prevFunc;
+    currentExprType = Type{TypeKind::FUNCTION, ""};
+}
+
 void Resolver::visit(ThisExpr* node) {
     if (!currentClass) {
         reportError("THALA-CLASS-003", "invalid 'this' usage", node->span,
@@ -859,6 +958,24 @@ void Resolver::visit(TypeTestExpr* node) {
 
 void Resolver::visit(ImportDecl*) {
     // ImportDecl is processed by the driver using topological load order.
+}
+
+void Resolver::visit(PackageDecl*) {
+    // Package declarations are organizational metadata; no semantic checks.
+}
+
+void Resolver::visit(EnumDecl*) {
+    // Enum names are registered in phase 1; members resolve dynamically.
+}
+
+void Resolver::visit(TernaryExpr* node) {
+    node->condition->accept(this);
+    node->thenExpr->accept(this);
+    Type thenType = currentExprType;
+    node->elseExpr->accept(this);
+    Type elseType = currentExprType;
+    // Result type unifies to a common type, else ANY.
+    currentExprType = (thenType.kind == elseType.kind) ? thenType : Type{TypeKind::ANY, ""};
 }
 
 } // namespace thalapathy

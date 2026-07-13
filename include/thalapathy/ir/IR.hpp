@@ -105,6 +105,9 @@ public:
     void visit(IfStmt* node) override;
     void visit(ForStmt* node) override;
     void visit(RangeLoopStmt* node) override;
+    void visit(ForEachStmt* node) override;
+    void visit(WhileStmt* node) override;
+    void visit(SwitchStmt* node) override;
     void visit(ReturnStmt* node) override;
     void visit(ThrowStmt* node) override;
     void visit(TryCatchStmt* node) override;
@@ -115,12 +118,14 @@ public:
     void visit(IdentifierExpr* node) override;
     void visit(BinaryExpr* node) override;
     void visit(UnaryExpr* node) override;
+    void visit(TernaryExpr* node) override;
     void visit(AssignExpr* node) override;
     void visit(CallExpr* node) override;
     void visit(MemberExpr* node) override;
     void visit(IndexExpr* node) override;
     void visit(ArrayExpr* node) override;
     void visit(MapExpr* node) override;
+    void visit(LambdaExpr* node) override;
     void visit(ThisExpr* node) override;
     void visit(SuperExpr* node) override;
     void visit(FieldDecl* node) override;
@@ -132,6 +137,8 @@ public:
     void visit(CastExpr* node) override;
     void visit(TypeTestExpr* node) override;
     void visit(ImportDecl* node) override;
+    void visit(PackageDecl* node) override;
+    void visit(EnumDecl* node) override;
 
 private:
     uint32_t addConstant(const ConstantVal& val);

@@ -34,6 +34,7 @@ struct FuncDecl : public DeclNode {
     struct Param {
         std::string name;
         std::string typeStr;
+        std::shared_ptr<ASTNode> defaultValue; // optional; evaluated when arg omitted
     };
     std::vector<Param> params;
     std::string returnTypeStr;
@@ -167,6 +168,34 @@ struct RangeLoopStmt : public StmtNode {
     void accept(ASTVisitor* visitor) override;
 };
 
+// foreach: `vaathi x in <iterable>` over arrays, strings, or map keys.
+struct ForEachStmt : public StmtNode {
+    std::string varName;
+    std::unique_ptr<ASTNode> iterable;
+    std::unique_ptr<ASTNode> body;
+
+    void accept(ASTVisitor* visitor) override;
+};
+
+struct WhileStmt : public StmtNode {
+    std::unique_ptr<ASTNode> condition;
+    std::unique_ptr<ASTNode> body;
+
+    void accept(ASTVisitor* visitor) override;
+};
+
+struct SwitchStmt : public StmtNode {
+    struct Case {
+        std::unique_ptr<ASTNode> value;
+        std::unique_ptr<ASTNode> body;
+    };
+    std::unique_ptr<ASTNode> subject;
+    std::vector<Case> cases;
+    std::unique_ptr<ASTNode> defaultBody; // can be null
+
+    void accept(ASTVisitor* visitor) override;
+};
+
 struct ReturnStmt : public StmtNode {
     std::unique_ptr<ASTNode> expression; // can be null
 
@@ -182,7 +211,9 @@ struct ThrowStmt : public StmtNode {
 struct TryCatchStmt : public StmtNode {
     std::unique_ptr<ASTNode> tryBody;
     std::string catchVarName;
+    std::string catchTypeName;              // optional class/enum filter for the catch
     std::unique_ptr<ASTNode> catchBody;
+    std::unique_ptr<ASTNode> finallyBody;   // optional `kadaisi { ... }` block
 
     void accept(ASTVisitor* visitor) override;
 };
@@ -192,6 +223,14 @@ struct BreakStmt : public StmtNode {
 };
 
 struct ContinueStmt : public StmtNode {
+    void accept(ASTVisitor* visitor) override;
+};
+
+// Java-style enum: `vagai Color { RED, GREEN, BLUE }`
+struct EnumDecl : public DeclNode {
+    std::string name;
+    std::vector<std::string> members;
+
     void accept(ASTVisitor* visitor) override;
 };
 
@@ -222,6 +261,15 @@ struct BinaryExpr : public ExprNode {
 struct UnaryExpr : public ExprNode {
     TokenType op;
     std::unique_ptr<ASTNode> operand;
+
+    void accept(ASTVisitor* visitor) override;
+};
+
+// Ternary conditional: `cond ? whenTrue : whenFalse`
+struct TernaryExpr : public ExprNode {
+    std::unique_ptr<ASTNode> condition;
+    std::unique_ptr<ASTNode> thenExpr;
+    std::unique_ptr<ASTNode> elseExpr;
 
     void accept(ASTVisitor* visitor) override;
 };
@@ -267,6 +315,12 @@ struct MapExpr : public ExprNode {
     void accept(ASTVisitor* visitor) override;
 };
 
+struct LambdaExpr : public ExprNode {
+    std::unique_ptr<FuncDecl> fn; // anonymous function descriptor
+
+    void accept(ASTVisitor* visitor) override;
+};
+
 struct ThisExpr : public ExprNode {
     void accept(ASTVisitor* visitor) override;
 };
@@ -303,6 +357,13 @@ struct ImportDecl : public DeclNode {
     void accept(ASTVisitor* visitor) override;
 };
 
+// Java-style package declaration: `nadu com.tvk.models;`
+struct PackageDecl : public DeclNode {
+    std::string packageName; // dotted, e.g. "com.tvk.models"
+
+    void accept(ASTVisitor* visitor) override;
+};
+
 // Visitor Interface
 struct ASTVisitor {
     virtual ~ASTVisitor() = default;
@@ -312,6 +373,8 @@ struct ASTVisitor {
     virtual void visit(ClassDecl* node) = 0;
     virtual void visit(EntryBlockDecl* node) = 0;
     virtual void visit(ImportDecl* node) = 0;
+    virtual void visit(PackageDecl* node) = 0;
+    virtual void visit(EnumDecl* node) = 0;
     virtual void visit(FieldDecl* node) = 0;
     virtual void visit(MethodDecl* node) = 0;
     virtual void visit(ConstructorDecl* node) = 0;
@@ -326,6 +389,9 @@ struct ASTVisitor {
     virtual void visit(IfStmt* node) = 0;
     virtual void visit(ForStmt* node) = 0;
     virtual void visit(RangeLoopStmt* node) = 0;
+    virtual void visit(ForEachStmt* node) = 0;
+    virtual void visit(WhileStmt* node) = 0;
+    virtual void visit(SwitchStmt* node) = 0;
     virtual void visit(ReturnStmt* node) = 0;
     virtual void visit(ThrowStmt* node) = 0;
     virtual void visit(TryCatchStmt* node) = 0;
@@ -336,12 +402,14 @@ struct ASTVisitor {
     virtual void visit(IdentifierExpr* node) = 0;
     virtual void visit(BinaryExpr* node) = 0;
     virtual void visit(UnaryExpr* node) = 0;
+    virtual void visit(TernaryExpr* node) = 0;
     virtual void visit(AssignExpr* node) = 0;
     virtual void visit(CallExpr* node) = 0;
     virtual void visit(MemberExpr* node) = 0;
     virtual void visit(IndexExpr* node) = 0;
     virtual void visit(ArrayExpr* node) = 0;
     virtual void visit(MapExpr* node) = 0;
+    virtual void visit(LambdaExpr* node) = 0;
     virtual void visit(ThisExpr* node) = 0;
     virtual void visit(SuperExpr* node) = 0;
 };
@@ -352,6 +420,8 @@ inline void FuncDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ClassDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void EntryBlockDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ImportDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void PackageDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void EnumDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void FieldDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void MethodDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ConstructorDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
@@ -366,6 +436,9 @@ inline void ExprStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void IfStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ForStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void RangeLoopStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void ForEachStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void WhileStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void SwitchStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ReturnStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ThrowStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void TryCatchStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
@@ -376,12 +449,14 @@ inline void LiteralExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void IdentifierExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void BinaryExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void UnaryExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void TernaryExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void AssignExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void CallExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void MemberExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void IndexExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ArrayExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void MapExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void LambdaExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ThisExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void SuperExpr::accept(ASTVisitor* visitor) { visitor->visit(this); }
 

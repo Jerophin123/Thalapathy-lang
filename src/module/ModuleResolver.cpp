@@ -1,14 +1,34 @@
 #include "thalapathy/module/ModuleResolver.hpp"
 #include "thalapathy/installation/TdkHome.hpp"
 #include <filesystem>
+#include <vector>
+#include <algorithm>
 
 namespace thalapathy {
 
-std::string ModuleResolver::resolve(const std::string& logicalName, const std::string& importingFileDir) {
+std::string ModuleResolver::resolve(const std::string& logicalName,
+                                    const std::string& importingFileDir,
+                                    const std::string& entryRootDir) {
     namespace fs = std::filesystem;
-    std::string filename = logicalName + ".tvk";
 
-    // 1. Check entry source directory
+    // Java-style dotted package paths map onto nested directories:
+    //   sarkar app.models.user;  ->  app/models/user.tvk
+    // A plain name (no dots) keeps the flat `<name>.tvk` behaviour.
+    bool isPackagePath = logicalName.find('.') != std::string::npos;
+    std::string relative = logicalName;
+    std::replace(relative.begin(), relative.end(), '.', '/');
+    std::string filename = relative + ".tvk";
+
+    // 0. Package (dotted) imports resolve from the project/source root first,
+    //    so any file in any sub-package can import `app.models.user` uniformly.
+    if (isPackagePath && !entryRootDir.empty()) {
+        fs::path rootPath = fs::path(entryRootDir) / filename;
+        if (fs::exists(rootPath)) {
+            return fs::weakly_canonical(rootPath).string();
+        }
+    }
+
+    // 1. Check importing file's directory
     if (!importingFileDir.empty()) {
         fs::path localPath = fs::path(importingFileDir) / filename;
         if (fs::exists(localPath)) {
@@ -28,6 +48,28 @@ std::string ModuleResolver::resolve(const std::string& logicalName, const std::s
         fs::path stdPath = homeResult.path / "lib" / "std" / filename;
         if (fs::exists(stdPath)) {
             return fs::weakly_canonical(stdPath).string();
+        }
+    }
+
+    // 4. Search relative to the running executable. This covers both an installed
+    //    TDK layout (bin/../lib/std) and a development build tree where the binary
+    //    sits alongside or a few levels below the repository root.
+    fs::path exeDir = installation::executableDir();
+    if (!exeDir.empty()) {
+        std::vector<fs::path> candidates = {
+            exeDir / "lib" / "std" / filename,
+            exeDir.parent_path() / "lib" / "std" / filename,
+        };
+        // Walk up a handful of parents looking for lib/std/<name>.tvk.
+        fs::path walk = exeDir;
+        for (int depth = 0; depth < 6 && !walk.empty(); ++depth) {
+            candidates.push_back(walk / "lib" / "std" / filename);
+            walk = walk.parent_path();
+        }
+        for (const auto& c : candidates) {
+            if (fs::exists(c)) {
+                return fs::weakly_canonical(c).string();
+            }
         }
     }
 

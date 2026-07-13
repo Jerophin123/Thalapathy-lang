@@ -13,4 +13,7 @@ struct TdkHomeResult {
 
 TdkHomeResult resolveTdkHome();
 
+// Absolute directory containing the running executable (empty on failure).
+std::filesystem::path executableDir();
+
 } // namespace thalapathy::installation

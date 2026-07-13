@@ -1,29 +1,130 @@
 // collections.tvk - Standard Collections module
+// "Ellaathaiyum ottha kootama vachikanum da nanba." 📦
 
+// LIFO stack.
 master Stack {
-    var items;
-    int size;
+    any items;
 
     mersal init() {
-        this.items = {};
-        this.size = 0;
+        this.items = [];
     }
 
-    mersal push(var item) {
-        this.items[string(this.size)] = item;
-        this.size = this.size + 1;
+    mersal push(any item) {
+        this.items.push(item);
     }
 
-    mersal pop() {
-        ghilli (this.size == 0) {
-            thiruppi null;
+    mersal pop() -> any {
+        thiruppi this.items.pop();
+    }
+
+    mersal peek() -> any {
+        ghilli (len(this.items) == 0) { thiruppi null; }
+        thiruppi this.items[len(this.items) - 1];
+    }
+
+    mersal size() -> int {
+        thiruppi len(this.items);
+    }
+
+    mersal isEmpty() -> bool {
+        thiruppi len(this.items) == 0;
+    }
+}
+
+// Growable ordered list.
+master List {
+    any items;
+
+    mersal init() {
+        this.items = [];
+    }
+
+    mersal add(any item) {
+        this.items.push(item);
+    }
+
+    mersal get(int i) -> any {
+        thiruppi this.items[i];
+    }
+
+    mersal set(int i, any item) {
+        this.items[i] = item;
+    }
+
+    mersal size() -> int {
+        thiruppi len(this.items);
+    }
+
+    mersal contains(any item) -> bool {
+        thiruppi this.items.contains(item);
+    }
+
+    mersal isEmpty() -> bool {
+        thiruppi len(this.items) == 0;
+    }
+
+    mersal toArray() -> any {
+        thiruppi this.items;
+    }
+}
+
+// FIFO queue.
+master Queue {
+    any items;
+
+    mersal init() {
+        this.items = [];
+    }
+
+    mersal enqueue(any item) {
+        this.items.push(item);
+    }
+
+    mersal dequeue() -> any {
+        ghilli (len(this.items) == 0) { thiruppi null; }
+        nanba first = this.items[0];
+        makkal rest = [];
+        vaathi i in range(1, len(this.items)) {
+            rest.push(this.items[i]);
         }
-        this.size = this.size - 1;
-        makkal item = this.items[string(this.size)];
-        thiruppi item;
+        this.items = rest;
+        thiruppi first;
     }
 
-    mersal isEmpty() {
-        thiruppi this.size == 0;
+    mersal size() -> int {
+        thiruppi len(this.items);
+    }
+
+    mersal isEmpty() -> bool {
+        thiruppi len(this.items) == 0;
+    }
+}
+
+// Unique-membership set (map-backed).
+master Set {
+    any store;
+
+    mersal init() {
+        this.store = {};
+    }
+
+    mersal add(string key) {
+        this.store[key] = true;
+    }
+
+    mersal has(string key) -> bool {
+        thiruppi this.store.has(key);
+    }
+
+    mersal remove(string key) {
+        this.store.remove(key);
+    }
+
+    mersal size() -> int {
+        thiruppi this.store.size();
+    }
+
+    mersal values() -> any {
+        thiruppi this.store.keys();
     }
 }

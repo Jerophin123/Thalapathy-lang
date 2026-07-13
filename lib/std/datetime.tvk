@@ -1,0 +1,18 @@
+// datetime.tvk - Date & time helpers
+// "Neram romba mukkiyam da nanba — right time-la right entry." ⏰
+
+// Ippothaikku epoch seconds.
+mersal ippo() -> int {
+    thiruppi __native_date_now_seconds();
+}
+
+// Epoch seconds-ah format string vachu azhaga maathu.
+// Default: "YYYY-MM-DD HH:MM:SS".
+mersal format(int seconds, string pattern) -> string {
+    thiruppi __native_date_format(seconds, pattern);
+}
+
+// Ippothaiya neram default format-la.
+mersal ippo_string() -> string {
+    thiruppi __native_date_format(__native_date_now_seconds(), "%Y-%m-%d %H:%M:%S");
+}

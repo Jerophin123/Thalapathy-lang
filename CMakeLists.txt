@@ -43,6 +43,7 @@ set(LIB_SOURCES
     src/module/ModuleResolver.cpp
     src/module/ModuleLoader.cpp
     src/module/ModuleGraph.cpp
+    src/net/Net.cpp
     src/format/Formatter.cpp
     src/format/FormatterConfig.cpp
     src/project/ProjectLoader.cpp
@@ -78,6 +79,11 @@ set(LIB_HEADERS
 
 add_library(thalapathy_lib STATIC ${LIB_SOURCES} ${LIB_HEADERS})
 
+# Networking backend (HTTP client/server) needs the socket library on Windows.
+if(WIN32)
+    target_link_libraries(thalapathy_lib PUBLIC ws2_32)
+endif()
+
 # Installable toolchain library for embedding
 add_library(thalapathy_toolchain STATIC ${LIB_SOURCES} ${LIB_HEADERS})
 set_target_properties(thalapathy_toolchain PROPERTIES OUTPUT_NAME thalapathy_toolchain EXPORT_NAME toolchain)
@@ -85,6 +91,9 @@ target_include_directories(thalapathy_toolchain PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+if(WIN32)
+    target_link_libraries(thalapathy_toolchain PUBLIC ws2_32)
+endif()
 
 # Executable CLI
 add_executable(thalapathy src/main.cpp)
@@ -109,6 +118,7 @@ add_executable(thalapathy_tests
     tests/parser/ParserTests.cpp
     tests/semantic/ResolverTests.cpp
     tests/interpreter/InterpreterTests.cpp
+    tests/interpreter/FeaturesTests.cpp
     tests/runtime/RuntimeTests.cpp
     tests/diagnostics/DiagnosticsTests.cpp
     tests/personality/PersonalityTests.cpp
@@ -165,6 +175,15 @@ install(FILES
         lib/std/text.tvk
         lib/std/collections.tvk
         lib/std/time.tvk
+        lib/std/json.tvk
+        lib/std/http.tvk
+        lib/std/web.tvk
+        lib/std/random.tvk
+        lib/std/os.tvk
+        lib/std/db.tvk
+        lib/std/regex.tvk
+        lib/std/datetime.tvk
+        lib/std/log.tvk
         DESTINATION lib/std)
 
 # 6. VS Code extension -> tools/vscode/
@@ -208,6 +227,7 @@ install(FILES
 
 # 9. Examples -> examples/
 install(DIRECTORY examples/hello examples/oop examples/modules examples/stdlib
+                  examples/web examples/packages
         DESTINATION examples)
 
 # 10. Legal -> legal/

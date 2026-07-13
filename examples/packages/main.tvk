@@ -1,0 +1,10 @@
+// main.tvk — root package (default nadu)
+// Java maadhiri dotted package path vachu import panrom.
+sarkar app.models.hero;
+sarkar app.services.greeter;
+
+thalapathy aarambam {
+    nanba thala = Hero("Vijay", "Leo");
+    sollu(thala.card());
+    sollu(vaazhthu(thala));
+}

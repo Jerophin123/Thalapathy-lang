@@ -1,0 +1,27 @@
+// random.tvk - Randomness helpers
+// "Vaazhkai oru soodaattam da nanba — but seed vachaa control un kaila." 🎲
+
+// Random float in [0.0, 1.0).
+mersal random() -> float {
+    thiruppi __native_random();
+}
+
+// Random integer in [lo, hi] inclusive.
+mersal randint(int lo, int hi) -> int {
+    thiruppi __native_random_int(lo, hi);
+}
+
+// Seed the generator for reproducible runs.
+mersal seed(int n) {
+    __native_random_seed(n);
+}
+
+// Pick a random element from an array.
+mersal choice(any items) -> any {
+    nanba n = len(items);
+    ghilli (n == 0) {
+        thiruppi null;
+    }
+    nanba idx = __native_random_int(0, n - 1);
+    thiruppi items[idx];
+}

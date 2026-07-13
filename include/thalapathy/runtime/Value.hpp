@@ -5,6 +5,7 @@
 #include <memory>
 #include <variant>
 #include <sstream>
+#include <functional>
 
 #include "thalapathy/ast/AST.hpp"
 
@@ -12,6 +13,7 @@ namespace thalapathy {
 
 struct Value;
 class Environment;
+class Interpreter;
 
 struct ArrayValue {
     std::vector<Value> elements;
@@ -39,14 +41,25 @@ struct InstanceValue {
 };
 
 using BuiltInFn = Value(*)(const std::vector<Value>& args);
+// Context-aware builtins receive the interpreter so they can invoke user callables
+// (e.g. web-server route handlers, higher-order native helpers).
+using ContextBuiltInFn = std::function<Value(Interpreter&, const std::vector<Value>&)>;
 
 struct BuiltInFunctionValue {
     std::string name;
-    BuiltInFn fn;
+    BuiltInFn fn = nullptr;
+    ContextBuiltInFn ctxFn = nullptr;
 };
 
 struct ErrorValue {
     std::string message;
+};
+
+// A single enum member, e.g. Color.RED. Identity is (typeName, name).
+struct EnumValue {
+    std::string typeName;
+    std::string name;
+    long long ordinal = 0;
 };
 
 struct Value {
@@ -63,7 +76,8 @@ struct Value {
         std::shared_ptr<ClassValue>,
         std::shared_ptr<InstanceValue>,
         std::shared_ptr<BuiltInFunctionValue>,
-        std::shared_ptr<ErrorValue>
+        std::shared_ptr<ErrorValue>,
+        std::shared_ptr<EnumValue>
     >;
 
     ValType val;
@@ -81,6 +95,7 @@ struct Value {
     bool isInstance() const { return std::holds_alternative<std::shared_ptr<InstanceValue>>(val); }
     bool isBuiltIn() const { return std::holds_alternative<std::shared_ptr<BuiltInFunctionValue>>(val); }
     bool isError() const { return std::holds_alternative<std::shared_ptr<ErrorValue>>(val); }
+    bool isEnum() const { return std::holds_alternative<std::shared_ptr<EnumValue>>(val); }
 
     std::string toString() const {
         if (isNull()) return "null";
@@ -121,6 +136,7 @@ struct Value {
         if (isInstance()) return "<instance of " + std::get<std::shared_ptr<InstanceValue>>(val)->klass->decl->name + ">";
         if (isBuiltIn()) return "<builtin>";
         if (isError()) return "Error: " + std::get<std::shared_ptr<ErrorValue>>(val)->message;
+        if (isEnum()) return std::get<std::shared_ptr<EnumValue>>(val)->name;
         return "unknown";
     }
 };

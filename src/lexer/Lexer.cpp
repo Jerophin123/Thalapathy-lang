@@ -29,6 +29,13 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"sarkar", TokenType::SARKAR},
     {"waiting", TokenType::WAITING},
     {"goat", TokenType::GOAT},
+    {"thuppakki", TokenType::THUPPAKKI},
+    {"thalaivaa", TokenType::THALAIVAA},
+    {"vazhakku", TokenType::VAZHAKKU},
+    {"kutty", TokenType::KUTTY},
+    {"nadu", TokenType::NADU},
+    {"vagai", TokenType::VAGAI},
+    {"kadaisi", TokenType::KADAISI},
 
     // Conventional
     {"int", TokenType::INT_TYPE},
@@ -159,6 +166,7 @@ Token Lexer::scanToken() {
         case ':': return Token{TokenType::COLON, makeSpan(startOffset, startLine, startCol), ":"};
         
         case '.': return Token{TokenType::DOT, makeSpan(startOffset, startLine, startCol), "."};
+        case '?': return Token{TokenType::QUESTION, makeSpan(startOffset, startLine, startCol), "?"};
 
         // Strings
         case '"':

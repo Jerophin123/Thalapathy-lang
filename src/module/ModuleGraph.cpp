@@ -15,8 +15,9 @@ bool ModuleGraph::buildGraph(const std::string& entryPath, std::vector<std::stri
         return false;
     }
     std::string canonicalEntry = fs::weakly_canonical(entryPath).string();
+    entryRootDir = fs::path(canonicalEntry).parent_path().string();
     std::vector<std::string> importStack;
-    
+
     return buildGraphRecursive(canonicalEntry, "main", importStack, errors);
 }
 
@@ -79,7 +80,7 @@ bool ModuleGraph::buildGraphRecursive(const std::string& canonicalPath, const st
     std::string importingDir = fs::path(canonicalPath).parent_path().string();
 
     for (const auto& depName : loadedRecord->dependencies) {
-        std::string depPath = ModuleResolver::resolve(depName, importingDir);
+        std::string depPath = ModuleResolver::resolve(depName, importingDir, entryRootDir);
         if (depPath.empty()) {
             errors.push_back("error: module '" + depName + "' not found (imported by " + canonicalPath + ")");
             storedRecord->state = ModuleState::FAILED;

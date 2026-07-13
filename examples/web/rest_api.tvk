@@ -1,0 +1,66 @@
+// rest_api.tvk - Full CRUD REST API: THALAPATHY 'Sarkar' router + VijayDB
+// "Naan solrathaye seiven, seiyaradhaye solven — CRUD ellaam single window da nanba." 🔥
+//
+// Run:   thalapathy examples/web/rest_api.tvk
+// Try:
+//   curl http://localhost:8080/makkal
+//   curl -X POST http://localhost:8080/makkal -d '{"name":"Vijay","katchi":"TVK"}'
+//   curl http://localhost:8080/makkal/1
+//   curl -X PUT http://localhost:8080/makkal/1 -d '{"katchi":"Thalapathy Vij...TVK"}'
+//   curl -X DELETE http://localhost:8080/makkal/1
+
+sarkar web;
+sarkar db;
+
+thalapathy aarambam {
+    nanba store = open("makkal.db");
+    nanba app = router();
+
+    // Middleware: ovvoru request-aiyum console-la logging pannu.
+    app.use(kutty (req) {
+        sollu("[" + req["method"] + "] " + req["path"]);
+        thiruppi null;
+    });
+
+    // LIST — ella makkal-aiyum kaattu.
+    app.get("/makkal", kutty (req) {
+        thiruppi reply_json(store.all("makkal"));
+    });
+
+    // READ — oruthara _id vachu edu.
+    app.get("/makkal/:id", kutty (req) {
+        nanba id = int(req["params"]["id"]);
+        nanba person = store.get("makkal", id);
+        ghilli (person == null) {
+            thiruppi reply_json_status(404, { pizhai: "Aal kaanom da nanba", id: id });
+        }
+        thiruppi reply_json(person);
+    });
+
+    // CREATE — pudhu aal-ah sernthu vidu.
+    app.post("/makkal", kutty (req) {
+        nanba data = body_json(req);
+        nanba saved = store.insert("makkal", data);
+        thiruppi reply_json_status(201, saved);
+    });
+
+    // UPDATE — irukkura aal-oda vivaram-ah maathu.
+    app.put("/makkal/:id", kutty (req) {
+        nanba id = int(req["params"]["id"]);
+        nanba data = body_json(req);
+        nanba ok = store.update("makkal", id, data);
+        ghilli (ok) {
+            thiruppi reply_json(store.get("makkal", id));
+        }
+        thiruppi reply_json_status(404, { pizhai: "Maatha aal illa da", id: id });
+    });
+
+    // DELETE — aal-ah neekku.
+    app.del("/makkal/:id", kutty (req) {
+        nanba id = int(req["params"]["id"]);
+        nanba ok = store.remove("makkal", id);
+        thiruppi reply_json({ neekki_aachu: ok, id: id });
+    });
+
+    serve(8080, app_handler(app));
+}

@@ -1,0 +1,9 @@
+// greeter.tvk — package: app.services
+// Innoru package-la irundhu app.models-ah import panrom.
+nadu app.services;
+
+sarkar app.models.hero;
+
+mersal vaazhthu(any hero) -> string {
+    thiruppi "Vaathi vaazhga! " + hero.card();
+}

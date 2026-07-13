@@ -1,0 +1,25 @@
+// scanner_demo.tvk - Showcase the Scanner class and Thalaivaa input/output dialogue entries
+sarkar io;
+
+thalapathy aarambam {
+    // Write output to the exit entry nammakku_pudicha_madhiri
+    nammakku_pudicha_madhiri.ezhudhu("Vanakkam! Entry-ah dhaan kettutu varanum, Exit nammakku pudicha madhiri... 🚪🔥");
+    
+    nammakku_pudicha_madhiri.ezhudhu("Please enter an integer, a float, and a word separated by spaces:");
+
+    // Instantiate Scanner wrapping standard input entry kettutu_varanum
+    makkal scanner = Scanner(kettutu_varanum);
+
+    // Read values
+    ghilli (scanner.hasNext()) {
+        makkal myInt = scanner.nextInt();
+        makkal myFloat = scanner.nextFloat();
+        makkal myWord = scanner.next();
+
+        sollu("Int read successfully: ", myInt);
+        sollu("Float read successfully: ", myFloat);
+        sollu("Word read successfully: ", myWord);
+    } illana {
+        sollu("No input provided!");
+    }
+}

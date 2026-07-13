@@ -11,5 +11,17 @@ THALAPATHY is statically verified via a resolver.
 - `void`: empty return indicators.
 - `null`: empty value type.
 
+## Enums (`vagai`)
+`vagai Name { A, B, C }` introduces a nominal enum type. Each member is a
+distinct value carrying its `typeName`, `name`, and `ordinal`. Members:
+- are accessed as `Name.A`,
+- expose `.name()`, `.ordinal()`, `.type()`,
+- compare by identity with `==` / `!=` and match as `thalaivaa` cases,
+- answer runtime type tests: `value aaguma Name`.
+
+Enums are the first user-defined nominal type beyond classes/interfaces.
+Generics remain **erased** (`goat T` parses but is not instantiated/checked);
+records, tuples, and union types are not yet implemented.
+
 ## Gradual Type Compatibility
 `any` acts as a gradual type override bypassing strict static checks, letting method calls pass checking and resolving them at runtime. Mutability is statically validated (e.g. reassigning to immutable `nanba` bindings triggers diagnostic `THALA-MUT-001`).

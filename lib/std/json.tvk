@@ -1,0 +1,12 @@
+// json.tvk - JSON parse/stringify for THALAPATHY APIs
+// "Data-ah nambi tholaikaadha da nanba, JSON-ah nambu." 🔥
+
+// Parse a JSON string into maps / arrays / primitives.
+mersal parse(string text) -> any {
+    thiruppi __native_json_parse(text);
+}
+
+// Convert any THALAPATHY value into a JSON string.
+mersal stringify(any value) -> string {
+    thiruppi __native_json_stringify(value);
+}

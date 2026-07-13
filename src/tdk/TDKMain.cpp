@@ -13,6 +13,7 @@
 #include "commands/CleanCommand.cpp"
 #include "commands/InspectCommand.cpp"
 #include "commands/PackageCommand.cpp"
+#include "commands/NaduCommand.cpp"
 #include <iostream>
 #include <map>
 #include <memory>
@@ -38,6 +39,7 @@ static void printTdkHelp() {
               << "  clean         Delete project build output safely\n"
               << "  inspect <pkg> Display compiled artifact metadata\n"
               << "  package       Generate .tvkpkg distribution archive\n"
+              << "  nadu <a.b.c>  Create a Java-style package (dirs + stub .tvk)\n"
               << "  help          Display this help text\n\n"
               << "Options:\n"
               << "  --json        Format command output as structured JSON\n"
@@ -87,6 +89,7 @@ int main(int argc, char* argv[]) {
     commands["clean"] = std::make_unique<CleanCommand>();
     commands["inspect"] = std::make_unique<InspectCommand>();
     commands["package"] = std::make_unique<PackageCommand>();
+    commands["nadu"] = std::make_unique<NaduCommand>();
 
     auto it = commands.find(subcommand);
     if (it == commands.end()) {

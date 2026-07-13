@@ -1,0 +1,42 @@
+// os.tvk - Operating system & process helpers
+// "Naadu enna pannumnu naan mudivu pannuven — OS-um adhey maadhiri." 🕶️
+
+// Name of the host OS: "windows", "macos" or "linux".
+mersal name() -> string {
+    thiruppi __native_os_name();
+}
+
+// Current working directory.
+mersal cwd() -> string {
+    thiruppi __native_os_cwd();
+}
+
+// Terminate the process with an exit code.
+mersal exit(int code) {
+    __native_os_exit(code);
+}
+
+// Milliseconds since the Unix epoch.
+mersal millis() -> int {
+    thiruppi __native_time_millis();
+}
+
+// Sleep for the given number of milliseconds.
+mersal sleep(int ms) {
+    __native_sleep_ms(ms);
+}
+
+// Read an environment variable (empty string if unset).
+mersal getenv(string key) -> string {
+    thiruppi __native_get_env(key);
+}
+
+// Set an environment variable for this process.
+mersal setenv(string key, string value) {
+    __native_set_env(key, value);
+}
+
+// Run a shell command, returning its exit status.
+mersal run(string cmd) -> int {
+    thiruppi __native_sys_command(cmd);
+}

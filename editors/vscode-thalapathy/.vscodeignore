@@ -1,0 +1,5 @@
+node_modules/
+convert-icon.mjs
+package-lock.json
+.gitignore
+*.vsix
