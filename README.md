@@ -10,8 +10,8 @@
 </pre>
 
 ### <span style="color:#FFC300">⚡</span> <span style="color:#E32227">TDK</span> — <span style="color:#FFC300">THALAPATHY</span> <span style="color:#E32227">Development Kit</span> <span style="color:#FFC300">⚡</span>
-**"Naa oru thadava sonna, naa nooru thadava sonna madhiri" — Compile karadhu Naan oru thadava sonna dhaan.**
-*(If it compiles once, it compiles a hundred times. That's the THALAPATHY guarantee.)*
+**"Compiler sonna kaaryam, adhu nadandhu than theerum!"**
+*(Whatever the compiler decides, it will happen — no re-runs, no re-takes, just clean builds.)*
 
 [![Version](https://img.shields.io/badge/release-1.0.0-E32227?style=for-the-badge&labelColor=FFC300&logo=git&logoColor=black)](#)
 [![Extension](https://img.shields.io/badge/source-.tvk-FFC300?style=for-the-badge&labelColor=E32227)](#)
@@ -242,7 +242,37 @@ target_link_libraries(my_app PRIVATE THALAPATHY::toolchain)
 
 ---
 
-## 🤝 Contributing
+---
+
+## <span style="color:#E32227">📚 Documentation</span>
+
+The `docs/` folder in the TDK distribution has the full deep-dive — grammar, runtime internals, and yes, the satire disclaimer gets its own file too. Start with `LANGUAGE_GUIDE.md` if you're new, or jump straight to whatever you're debugging.
+
+| Doc | What's Inside |
+|---|---|
+| [`docs/LANGUAGE_GUIDE.md`](docs/LANGUAGE_GUIDE.md) | Beginner-friendly walkthrough — start here |
+| [`docs/LANGUAGE_SPEC.md`](docs/LANGUAGE_SPEC.md) | Full formal language specification |
+| [`docs/GRAMMAR.md`](docs/GRAMMAR.md) | Formal grammar / EBNF reference |
+| [`docs/TYPE_SYSTEM.md`](docs/TYPE_SYSTEM.md) | Static typing rules & type-checker behavior |
+| [`docs/MEMORY_MODEL.md`](docs/MEMORY_MODEL.md) | Memory ownership & lifetime semantics |
+| [`docs/IR_SPEC.md`](docs/IR_SPEC.md) | Intermediate representation used by the compiler |
+| [`docs/VIJAY_BINARY_FORMAT.md`](docs/VIJAY_BINARY_FORMAT.md) | `.vijay` bytecode / VEAF format reference |
+| [`docs/NATIVE_RUNTIME_BRIDGE.md`](docs/NATIVE_RUNTIME_BRIDGE.md) | Interop bridge to native/C++ runtime |
+| [`docs/MODULE_SYSTEM.md`](docs/MODULE_SYSTEM.md) | `sarkar` imports, resolution & cycle detection |
+| [`docs/OOP_SYNTAX_COMPATIBILITY_AUDIT.md`](docs/OOP_SYNTAX_COMPATIBILITY_AUDIT.md) | OOP feature audit (`varisu`, `kaththi`, etc.) |
+| [`docs/STANDARD_LIBRARY.md`](docs/STANDARD_LIBRARY.md) | Standard library modules & APIs |
+| [`docs/TDK.md`](docs/TDK.md) | TDK toolchain overview |
+| [`docs/TDK_INSTALLATION.md`](docs/TDK_INSTALLATION.md) | Detailed installation instructions |
+| [`docs/TDK_COMMANDS.md`](docs/TDK_COMMANDS.md) | Full CLI command reference |
+| [`docs/DIAGNOSTICS.md`](docs/DIAGNOSTICS.md) | Error/warning catalog & diagnostic modes |
+| [`docs/THALAPATHY_REFERENCES.md`](docs/THALAPATHY_REFERENCES.md) | Glossary of movie-inspired keywords & terms |
+| [`docs/POLITICAL_SATIRE.md`](docs/POLITICAL_SATIRE.md) | Scope & guardrails for `--mode political-parody` |
+| [`docs/V010_AUDIT_REPORT.md`](docs/V010_AUDIT_REPORT.md) | v1.0.0 release audit report |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Planned features & future direction |
+
+---
+
+## <span style="color:#FFC300">🤝 Contributing</span>
 
 Pull requests are welcome — think of every PR review as a script narration session. Bring your best scenes (clean commits), keep the runtime tight (no bloated diffs), and be ready for at least one dialogue-worthy code review comment.
 
