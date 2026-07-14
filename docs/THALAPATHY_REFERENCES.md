@@ -1,6 +1,8 @@
 # THALAPATHY Cinema Reference Catalogue
 
-This document catalogs references to Thalapathy Vijay's filmography, dialogue style, and fan culture as represented in keyword names and compilation messages.
+Fan tribute reference for **Joseph Vijay Chandrasekhar** (Thalapathy Vijay). See [TRIBUTE.md](TRIBUTE.md).
+
+This document catalogs references to Vijay's filmography, dialogue style, and fan culture as represented in keyword names and compilation messages.
 
 ## Filmography & Keyword Alignments
 - **Ghilli (2004)**: Used as the conditional keyword `ghilli` (replaces `if`) due to the high-stakes, fast-paced choice dynamics in the film.

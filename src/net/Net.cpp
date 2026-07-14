@@ -5,6 +5,10 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <vector>
+#include <functional>
+#include <map>
+#include <cstdint>
 
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -27,6 +31,8 @@
 
 namespace thalapathy {
 namespace net {
+
+std::function<bool()> g_reload_check = nullptr;
 
 namespace {
 
@@ -298,12 +304,32 @@ bool httpServe(int port, const RouteHandler& handler) {
     }
 
     for (;;) {
+        if (g_reload_check) {
+            fd_set fds;
+            FD_ZERO(&fds);
+            FD_SET(listener, &fds);
+            timeval tv{0, 500000}; // 500ms
+            int sel = ::select(static_cast<int>(listener + 1), &fds, nullptr, nullptr, &tv);
+            if (sel < 0) {
+                CLOSESOCK(listener);
+                return false;
+            }
+            if (g_reload_check()) {
+                CLOSESOCK(listener);
+                return true;
+            }
+            if (sel == 0) {
+                continue;
+            }
+        }
+
         socket_t client = ::accept(listener, nullptr, nullptr);
         if (client == INVALID_SOCKET) continue;
 
         std::string raw;
         if (recvRequest(client, raw)) {
             HttpRequest req = parseRequest(raw);
+            req.socketId = static_cast<long long>(client);
             HttpResponse resp;
             try {
                 resp = handler(req);
@@ -312,21 +338,273 @@ bool httpServe(int port, const RouteHandler& handler) {
                 resp.body = "Internal Server Error";
             }
 
-            std::ostringstream out;
-            out << "HTTP/1.1 " << resp.status << " " << statusText(resp.status) << "\r\n";
-            out << "Content-Type: " << resp.contentType << "\r\n";
-            out << "Content-Length: " << resp.body.size() << "\r\n";
-            for (const auto& [k, v] : resp.headers) {
-                out << k << ": " << v << "\r\n";
+            if (resp.status != -1) {
+                std::ostringstream out;
+                out << "HTTP/1.1 " << resp.status << " " << statusText(resp.status) << "\r\n";
+                out << "Content-Type: " << resp.contentType << "\r\n";
+                out << "Content-Length: " << resp.body.size() << "\r\n";
+                for (const auto& [k, v] : resp.headers) {
+                    out << k << ": " << v << "\r\n";
+                }
+                out << "Connection: close\r\n\r\n";
+                out << resp.body;
+                sendAll(client, out.str());
+                CLOSESOCK(client);
             }
-            out << "Connection: close\r\n\r\n";
-            out << resp.body;
-            sendAll(client, out.str());
+        } else {
+            CLOSESOCK(client);
         }
-        CLOSESOCK(client);
     }
     // unreachable
 }
 
-} // namespace thalapathy
+bool recvExact(socket_t sock, char* buf, size_t len) {
+    size_t received = 0;
+    while (received < len) {
+        int n = ::recv(sock, buf + received, static_cast<int>(len - received), 0);
+        if (n <= 0) return false;
+        received += static_cast<size_t>(n);
+    }
+    return true;
+}
+
+std::string sha1(const std::string& input) {
+    uint32_t h0 = 0x67452301;
+    uint32_t h1 = 0xEFCDAB89;
+    uint32_t h2 = 0x98BADCFE;
+    uint32_t h3 = 0x10325476;
+    uint32_t h4 = 0xC3D2E1F0;
+
+    std::string message = input;
+    uint64_t bitLength = message.size() * 8;
+    message.push_back((char)0x80);
+    while ((message.size() + 8) % 64 != 0) {
+        message.push_back(0x00);
+    }
+    for (int i = 7; i >= 0; i--) {
+        message.push_back((char)((bitLength >> (i * 8)) & 0xFF));
+    }
+
+    for (size_t offset = 0; offset < message.size(); offset += 64) {
+        uint32_t w[80] = {0};
+        for (int i = 0; i < 16; i++) {
+            w[i] = ((uint32_t)(uint8_t)message[offset + i * 4] << 24)
+                 | ((uint32_t)(uint8_t)message[offset + i * 4 + 1] << 16)
+                 | ((uint32_t)(uint8_t)message[offset + i * 4 + 2] << 8)
+                 | ((uint32_t)(uint8_t)message[offset + i * 4 + 3]);
+        }
+        for (int i = 16; i < 80; i++) {
+            uint32_t val = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16];
+            w[i] = (val << 1) | (val >> 31);
+        }
+
+        uint32_t a = h0;
+        uint32_t b = h1;
+        uint32_t c = h2;
+        uint32_t d = h3;
+        uint32_t e = h4;
+
+        for (int i = 0; i < 80; i++) {
+            uint32_t f, k;
+            if (i < 20) {
+                f = (b & c) | ((~b) & d);
+                k = 0x5A827999;
+            } else if (i < 40) {
+                f = b ^ c ^ d;
+                k = 0x6ED9EBA1;
+            } else if (i < 60) {
+                f = (b & c) | (b & d) | (c & d);
+                k = 0x8F1BBCDC;
+            } else {
+                f = b ^ c ^ d;
+                k = 0xCA62C1D6;
+            }
+
+            uint32_t temp = ((a << 5) | (a >> 27)) + f + e + k + w[i];
+            e = d;
+            d = c;
+            c = (b << 30) | (b >> 2);
+            b = a;
+            a = temp;
+        }
+
+        h0 += a;
+        h1 += b;
+        h2 += c;
+        h3 += d;
+        h4 += e;
+    }
+
+    std::string digest;
+    uint32_t hs[5] = {h0, h1, h2, h3, h4};
+    for (int i = 0; i < 5; i++) {
+        digest.push_back((char)((hs[i] >> 24) & 0xFF));
+        digest.push_back((char)((hs[i] >> 16) & 0xFF));
+        digest.push_back((char)((hs[i] >> 8) & 0xFF));
+        digest.push_back((char)(hs[i] & 0xFF));
+    }
+    return digest;
+}
+
+std::string base64_encode(const std::string& in) {
+    static const char lookup[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    int val = 0, valb = -6;
+    for (uint8_t c : in) {
+        val = (val << 8) + c;
+        valb += 8;
+        while (valb >= 0) {
+            out.push_back(lookup[(val >> valb) & 0x3F]);
+            valb -= 6;
+        }
+    }
+    if (valb > -6) out.push_back(lookup[((val << 8) >> (valb + 8)) & 0x3F]);
+    while (out.size() % 4 != 0) out.push_back('=');
+    return out;
+}
+
+bool wsUpgrade(socket_t client, const std::map<std::string, std::string>& headers) {
+    std::string key = "";
+    for (const auto& [k, v] : headers) {
+        std::string lk = k;
+        std::transform(lk.begin(), lk.end(), lk.begin(), ::tolower);
+        if (lk == "sec-websocket-key") {
+            key = v;
+            break;
+        }
+    }
+    if (key.empty()) return false;
+
+    std::string acceptKey = base64_encode(sha1(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+
+    std::ostringstream ss;
+    ss << "HTTP/1.1 101 Switching Protocols\r\n"
+       << "Upgrade: websocket\r\n"
+       << "Connection: Upgrade\r\n"
+       << "Sec-WebSocket-Accept: " << acceptKey << "\r\n\r\n";
+
+    return sendAll(client, ss.str());
+}
+
+bool wsSend(socket_t client, const std::string& message) {
+    std::string header;
+    header.push_back(static_cast<char>(0x81)); // FIN + Text
+
+    size_t size = message.size();
+    if (size <= 125) {
+        header.push_back(static_cast<char>(size));
+    } else if (size <= 65535) {
+        header.push_back(static_cast<char>(126));
+        header.push_back(static_cast<char>((size >> 8) & 0xFF));
+        header.push_back(static_cast<char>(size & 0xFF));
+    } else {
+        header.push_back(static_cast<char>(127));
+        for (int i = 7; i >= 0; i--) {
+            header.push_back(static_cast<char>((size >> (i * 8)) & 0xFF));
+        }
+    }
+
+    if (!sendAll(client, header)) return false;
+    return sendAll(client, message);
+}
+
+std::string wsRecv(socket_t client, bool& closed) {
+    closed = false;
+    char header[2];
+    if (!recvExact(client, header, 2)) {
+        closed = true;
+        return "";
+    }
+
+    uint8_t opcode = header[0] & 0x0F;
+    bool masked = (header[1] & 0x80) != 0;
+    uint64_t payloadLen = header[1] & 0x7F;
+
+    if (opcode == 0x8) { // Close
+        closed = true;
+        return "";
+    }
+
+    if (payloadLen == 126) {
+        char ext[2];
+        if (!recvExact(client, ext, 2)) {
+            closed = true;
+            return "";
+        }
+        payloadLen = ((uint64_t)(uint8_t)ext[0] << 8) | (uint8_t)ext[1];
+    } else if (payloadLen == 127) {
+        char ext[8];
+        if (!recvExact(client, ext, 8)) {
+            closed = true;
+            return "";
+        }
+        payloadLen = 0;
+        for (int i = 0; i < 8; i++) {
+            payloadLen = (payloadLen << 8) | (uint8_t)ext[i];
+        }
+    }
+
+    char mask[4] = {0};
+    if (masked) {
+        if (!recvExact(client, mask, 4)) {
+            closed = true;
+            return "";
+        }
+    }
+
+    std::vector<char> payload(static_cast<size_t>(payloadLen));
+    if (payloadLen > 0) {
+        if (!recvExact(client, payload.data(), static_cast<size_t>(payloadLen))) {
+            closed = true;
+            return "";
+        }
+    }
+
+    if (masked) {
+        for (size_t i = 0; i < payload.size(); i++) {
+            payload[i] ^= mask[i % 4];
+        }
+    }
+
+    return std::string(payload.begin(), payload.end());
+}
+
+bool sseUpgrade(socket_t client) {
+    std::ostringstream ss;
+    ss << "HTTP/1.1 200 OK\r\n"
+       << "Content-Type: text/event-stream\r\n"
+       << "Cache-Control: no-cache\r\n"
+       << "Connection: keep-alive\r\n\r\n";
+    return sendAll(client, ss.str());
+}
+
+bool sseSend(socket_t client, const std::string& data) {
+    std::string message = "data: " + data + "\n\n";
+    return sendAll(client, message);
+}
+
+bool socketIsClosed(socket_t client) {
+    char buf;
+#ifdef _WIN32
+    int res = ::recv(client, &buf, 1, MSG_PEEK);
+#else
+    int res = ::recv(client, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
+#endif
+    if (res == 0) return true;
+    if (res < 0) {
+#ifdef _WIN32
+        int err = WSAGetLastError();
+        if (err != WSAEWOULDBLOCK) return true;
+#else
+        if (errno != EAGAIN && errno != EWOULDBLOCK) return true;
+#endif
+    }
+    return false;
+}
+
+void socketClose(socket_t client) {
+    CLOSESOCK(client);
+}
+
+} // namespace net
 } // namespace thalapathy

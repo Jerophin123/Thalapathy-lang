@@ -303,6 +303,62 @@ static Value builtinRandomSeed(const std::vector<Value>& args) {
     return Value{std::monostate{}};
 }
 
+// ---- Hashing (standard SHA-256, FIPS 180-4) ----
+static Value builtinSha256(const std::vector<Value>& args) {
+    if (args.empty() || !args[0].isString()) return Value{std::string("")};
+    const std::string& msg = std::get<std::string>(args[0].val);
+
+    auto rotr = [](uint32_t x, uint32_t n) -> uint32_t { return (x >> n) | (x << (32 - n)); };
+    static const uint32_t K[64] = {
+        0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+        0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+        0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+        0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+        0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+        0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+        0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+        0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2 };
+    uint32_t h[8] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
+
+    std::string data = msg;
+    uint64_t bitLen = static_cast<uint64_t>(data.size()) * 8;
+    data.push_back(static_cast<char>(0x80));
+    while (data.size() % 64 != 56) data.push_back(0);
+    for (int i = 7; i >= 0; --i) data.push_back(static_cast<char>((bitLen >> (i * 8)) & 0xff));
+
+    for (size_t chunk = 0; chunk < data.size(); chunk += 64) {
+        uint32_t w[64];
+        for (int i = 0; i < 16; ++i) {
+            w[i] = (static_cast<uint8_t>(data[chunk + i*4]) << 24) |
+                   (static_cast<uint8_t>(data[chunk + i*4+1]) << 16) |
+                   (static_cast<uint8_t>(data[chunk + i*4+2]) << 8) |
+                   (static_cast<uint8_t>(data[chunk + i*4+3]));
+        }
+        for (int i = 16; i < 64; ++i) {
+            uint32_t s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15] >> 3);
+            uint32_t s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2] >> 10);
+            w[i] = w[i-16] + s0 + w[i-7] + s1;
+        }
+        uint32_t a=h[0],b=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+        for (int i = 0; i < 64; ++i) {
+            uint32_t S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+            uint32_t ch = (e & f) ^ ((~e) & g);
+            uint32_t t1 = hh + S1 + ch + K[i] + w[i];
+            uint32_t S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+            uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
+            uint32_t t2 = S0 + maj;
+            hh=g; g=f; f=e; e=d+t1; d=c; c=b; b=a; a=t1+t2;
+        }
+        h[0]+=a; h[1]+=b; h[2]+=c; h[3]+=d; h[4]+=e; h[5]+=f; h[6]+=g; h[7]+=hh;
+    }
+    static const char* hex = "0123456789abcdef";
+    std::string out;
+    for (int i = 0; i < 8; ++i)
+        for (int b = 28; b >= 0; b -= 4)
+            out.push_back(hex[(h[i] >> b) & 0xf]);
+    return Value{out};
+}
+
 // ---- OS / process ----
 static Value builtinOsName(const std::vector<Value>& args) {
     (void)args;
@@ -829,6 +885,64 @@ static Value builtinDbCount(const std::vector<Value>& args) {
     return Value{static_cast<long long>(it->second.docs.size())};
 }
 
+static Value builtinWsUpgrade(const std::vector<Value>& args) {
+    if (args.size() < 2 || !args[0].isInt() || !args[1].isMap()) return Value{false};
+    long long socketId = std::get<long long>(args[0].val);
+    auto headersMap = std::get<std::shared_ptr<MapValue>>(args[1].val);
+    std::map<std::string, std::string> headers;
+    for (const auto& [k, v] : headersMap->entries) {
+        headers[k] = v.toString();
+    }
+    bool ok = net::wsUpgrade(static_cast<net::socket_t>(socketId), headers);
+    return Value{ok};
+}
+
+static Value builtinWsSend(const std::vector<Value>& args) {
+    if (args.size() < 2 || !args[0].isInt() || !args[1].isString()) return Value{false};
+    long long socketId = std::get<long long>(args[0].val);
+    std::string msg = std::get<std::string>(args[1].val);
+    bool ok = net::wsSend(static_cast<net::socket_t>(socketId), msg);
+    return Value{ok};
+}
+
+static Value builtinWsRecv(const std::vector<Value>& args) {
+    if (args.empty() || !args[0].isInt()) return Value{std::monostate{}};
+    long long socketId = std::get<long long>(args[0].val);
+    bool closed = false;
+    std::string msg = net::wsRecv(static_cast<net::socket_t>(socketId), closed);
+    if (closed) return Value{std::monostate{}};
+    return Value{msg};
+}
+
+static Value builtinSseUpgrade(const std::vector<Value>& args) {
+    if (args.empty() || !args[0].isInt()) return Value{false};
+    long long socketId = std::get<long long>(args[0].val);
+    bool ok = net::sseUpgrade(static_cast<net::socket_t>(socketId));
+    return Value{ok};
+}
+
+static Value builtinSseSend(const std::vector<Value>& args) {
+    if (args.size() < 2 || !args[0].isInt() || !args[1].isString()) return Value{false};
+    long long socketId = std::get<long long>(args[0].val);
+    std::string data = std::get<std::string>(args[1].val);
+    bool ok = net::sseSend(static_cast<net::socket_t>(socketId), data);
+    return Value{ok};
+}
+
+static Value builtinSocketIsClosed(const std::vector<Value>& args) {
+    if (args.empty() || !args[0].isInt()) return Value{true};
+    long long socketId = std::get<long long>(args[0].val);
+    bool closed = net::socketIsClosed(static_cast<net::socket_t>(socketId));
+    return Value{closed};
+}
+
+static Value builtinSocketClose(const std::vector<Value>& args) {
+    if (args.empty() || !args[0].isInt()) return Value{std::monostate{}};
+    long long socketId = std::get<long long>(args[0].val);
+    net::socketClose(static_cast<net::socket_t>(socketId));
+    return Value{std::monostate{}};
+}
+
 Interpreter::Interpreter() {
     globals = std::make_shared<Environment>();
     environment = globals;
@@ -865,6 +979,7 @@ Interpreter::Interpreter() {
     globals->define("__native_random", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_random", builtinRandom})});
     globals->define("__native_random_int", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_random_int", builtinRandomInt})});
     globals->define("__native_random_seed", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_random_seed", builtinRandomSeed})});
+    globals->define("__native_sha256", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_sha256", builtinSha256})});
 
     // OS / process
     globals->define("__native_os_name", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_os_name", builtinOsName})});
@@ -881,6 +996,13 @@ Interpreter::Interpreter() {
     globals->define("__native_http_get", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_http_get", builtinHttpGet})});
     globals->define("__native_http_post", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_http_post", builtinHttpPost})});
     globals->define("__native_http_request", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_http_request", builtinHttpRequest})});
+    globals->define("__native_ws_upgrade", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_ws_upgrade", builtinWsUpgrade})});
+    globals->define("__native_ws_send", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_ws_send", builtinWsSend})});
+    globals->define("__native_ws_recv", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_ws_recv", builtinWsRecv})});
+    globals->define("__native_sse_upgrade", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_sse_upgrade", builtinSseUpgrade})});
+    globals->define("__native_sse_send", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_sse_send", builtinSseSend})});
+    globals->define("__native_socket_is_closed", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_socket_is_closed", builtinSocketIsClosed})});
+    globals->define("__native_socket_close", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_socket_close", builtinSocketClose})});
 
     // Regex
     globals->define("__native_regex_match", Value{std::make_shared<BuiltInFunctionValue>(BuiltInFunctionValue{"__native_regex_match", builtinRegexMatch})});
@@ -924,6 +1046,7 @@ Interpreter::Interpreter() {
                 auto headerMap = std::make_shared<MapValue>();
                 for (const auto& [k, v] : req.headers) headerMap->entries[k] = Value{v};
                 reqMap->entries["headers"] = Value{headerMap};
+                reqMap->entries["socketId"] = Value{req.socketId};
 
                 net::HttpResponse resp;
                 Value result = interp.callCallable(handler, {Value{reqMap}});
@@ -941,6 +1064,12 @@ Interpreter::Interpreter() {
                         resp.contentType = std::get<std::string>(it->second.val);
                     else if (auto it = m->entries.find("type"); it != m->entries.end() && it->second.isString())
                         resp.contentType = std::get<std::string>(it->second.val);
+                    // Optional custom response headers (Location for redirects,
+                    // security headers, ETag, Cache-Control, ...): a `headers` map.
+                    if (auto it = m->entries.find("headers"); it != m->entries.end() && it->second.isMap()) {
+                        auto hm = std::get<std::shared_ptr<MapValue>>(it->second.val);
+                        for (const auto& [hk, hv] : hm->entries) resp.headers[hk] = hv.toString();
+                    }
                 } else {
                     resp.body = result.toString();
                 }
@@ -1030,6 +1159,75 @@ void Interpreter::visit(VarDecl* node) {
         val = evaluate(node->initializer.get());
     }
     environment->define(node->name, val);
+}
+
+void Interpreter::bindPattern(bool isObjectPattern, const std::vector<NanbiBinding>& bindings, const Value& source) {
+    if (!isObjectPattern) {
+        if (!source.isArray()) {
+            throw std::runtime_error("[THALA-NANBI-003] array binding pattern requires a destructurable list; received a non-list value");
+        }
+        auto arr = std::get<std::shared_ptr<ArrayValue>>(source.val);
+        size_t idx = 0;
+        for (const auto& b : bindings) {
+            if (b.kind == NanbiBinding::Kind::Rest) {
+                auto rest = std::make_shared<ArrayValue>();
+                for (size_t k = idx; k < arr->elements.size(); ++k) rest->elements.push_back(arr->elements[k]);
+                idx = arr->elements.size();
+                environment->define(b.name, Value{rest});
+                continue;
+            }
+            if (idx >= arr->elements.size()) {
+                throw std::runtime_error("[THALA-NANBI-002] binding pattern expects more values than the source provides");
+            }
+            Value elem = arr->elements[idx];
+            if (b.kind == NanbiBinding::Kind::Name) environment->define(b.name, elem);
+            // Ignore (`_`) consumes a slot but binds nothing.
+            idx++;
+        }
+    } else {
+        if (!source.isMap()) {
+            throw std::runtime_error("[THALA-NANBI-003] object binding pattern requires a map/object source");
+        }
+        auto map = std::get<std::shared_ptr<MapValue>>(source.val);
+        for (const auto& b : bindings) {
+            auto it = map->entries.find(b.key);
+            Value v = (it != map->entries.end()) ? it->second : Value{std::monostate{}};
+            environment->define(b.name, v);
+        }
+    }
+}
+
+void Interpreter::visit(NanbiDecl* node) {
+    // Evaluate the source EXACTLY ONCE, then bind the pattern against it.
+    Value source = Value{std::monostate{}};
+    if (node->initializer) source = evaluate(node->initializer.get());
+    bindPattern(node->isObjectPattern, node->bindings, source);
+}
+
+// Equality used by `yaaru` pattern matching (numeric/string/bool/null).
+static bool matchEquals(const Value& a, const Value& b) {
+    if (a.isNull() || b.isNull()) return a.isNull() && b.isNull();
+    if ((a.isInt() || a.isFloat()) && (b.isInt() || b.isFloat())) {
+        double x = a.isFloat() ? std::get<double>(a.val) : static_cast<double>(std::get<long long>(a.val));
+        double y = b.isFloat() ? std::get<double>(b.val) : static_cast<double>(std::get<long long>(b.val));
+        return x == y;
+    }
+    if (a.isString() && b.isString()) return std::get<std::string>(a.val) == std::get<std::string>(b.val);
+    if (a.isBool() && b.isBool()) return std::get<bool>(a.val) == std::get<bool>(b.val);
+    return false;
+}
+
+void Interpreter::visit(MatchStmt* node) {
+    // Subject evaluated exactly once; first matching `ivan` arm runs, else `yaarumilla`.
+    Value subject = evaluate(node->subject.get());
+    for (const auto& arm : node->arms) {
+        Value pat = evaluate(arm.pattern.get());
+        if (matchEquals(subject, pat)) {
+            execute(arm.body.get());
+            return;
+        }
+    }
+    if (node->defaultBody) execute(node->defaultBody.get());
 }
 
 void Interpreter::visit(FuncDecl* node) {
@@ -1178,7 +1376,11 @@ void Interpreter::visit(ForEachStmt* node) {
     this->environment = loopEnv;
     try {
         for (const auto& item : items) {
-            loopEnv->define(node->varName, item);
+            if (node->hasPattern) {
+                bindPattern(node->patternIsObject, node->patternBindings, item);
+            } else {
+                loopEnv->define(node->varName, item);
+            }
             try {
                 execute(node->body.get());
             } catch (const BreakSignal&) {
@@ -1337,6 +1539,19 @@ void Interpreter::visit(IdentifierExpr* node) {
 
 void Interpreter::visit(BinaryExpr* node) {
     Value left = evaluate(node->left.get());
+
+    // THALA-LOGIC-001 fix: `&&` / `||` short-circuit — the right operand is
+    // evaluated ONLY when the left does not already decide the result. This
+    // makes the idiom `i >= 0 && arr[i] > x` safe.
+    if (node->op == TokenType::AMP_AMP || node->op == TokenType::BAR_BAR) {
+        bool leftBool = std::get<bool>(left.val);
+        if (node->op == TokenType::AMP_AMP && !leftBool) { lastExprVal = Value{false}; return; }
+        if (node->op == TokenType::BAR_BAR && leftBool)  { lastExprVal = Value{true};  return; }
+        Value right = evaluate(node->right.get());
+        lastExprVal = Value{std::get<bool>(right.val)};
+        return;
+    }
+
     Value right = evaluate(node->right.get());
 
     if (left.isInstance()) {
@@ -1488,6 +1703,9 @@ void Interpreter::visit(BinaryExpr* node) {
 }
 
 void Interpreter::visit(UnaryExpr* node) {
+    if (node->op == TokenType::KAATHIRU) {
+        throw std::runtime_error("error[THALA-ASYNC-001]: coroutine runtime required for 'kaathiru' (await) suspension. Staged with design.");
+    }
     Value operand = evaluate(node->operand.get());
     if (node->op == TokenType::BANG) {
         lastExprVal = Value{!std::get<bool>(operand.val)};
@@ -1786,8 +2004,15 @@ bool Interpreter::tryInvokeMethod(const Value& obj, const std::string& name,
             out = Value{s.find(std::get<std::string>(args[0].val)) != std::string::npos};
             return true;
         }
-        if (name == "indexOf" && args.size() == 1 && args[0].isString()) {
-            size_t p = s.find(std::get<std::string>(args[0].val));
+        if (name == "indexOf" && args.size() >= 1 && args[0].isString()) {
+            size_t start = 0;
+            if (args.size() >= 2 && args[1].isInt()) {
+                long long offset = std::get<long long>(args[1].val);
+                if (offset < 0) start = 0;
+                else if (offset > static_cast<long long>(s.size())) start = s.size();
+                else start = static_cast<size_t>(offset);
+            }
+            size_t p = s.find(std::get<std::string>(args[0].val), start);
             out = Value{p == std::string::npos ? -1LL : static_cast<long long>(p)};
             return true;
         }
@@ -1906,6 +2131,31 @@ void Interpreter::visit(CallExpr* node) {
         }
 
         throw std::runtime_error("Method '" + member->memberName + "' not found on value");
+    }
+
+    // THALA-OOP-001 fix: `super.init(...)` / `super.aarambam(...)` invoke the
+    // parent constructor on the current instance.
+    if (auto sup = dynamic_cast<SuperExpr*>(node->callee.get())) {
+        if (sup->method == "init" || sup->method == "aarambam") {
+            bool foundSuper = false, foundThis = false;
+            Value superKlassVal = environment->get("super", foundSuper);
+            Value thisObj = environment->get("this", foundThis);
+            if (foundSuper && superKlassVal.isClass() && foundThis) {
+                std::vector<Value> cargs;
+                for (const auto& a : node->arguments) cargs.push_back(evaluate(a.get()));
+                auto owner = std::get<std::shared_ptr<ClassValue>>(superKlassVal.val);
+                ConstructorDecl* pc = nullptr;
+                while (owner) {
+                    for (const auto& c : owner->decl->constructors)
+                        if (c->params.size() == cargs.size()) { pc = c.get(); break; }
+                    if (pc) break;
+                    owner = owner->parentClass;
+                }
+                if (pc) runConstructorOn(thisObj, owner, pc, cargs);
+                lastExprVal = Value{std::monostate{}};
+                return;
+            }
+        }
     }
 
     Value callee = evaluate(node->callee.get());
@@ -2096,7 +2346,7 @@ void Interpreter::visit(CallExpr* node) {
 
         lastExprVal = objVal;
     } else {
-        throw std::runtime_error("Callee is not a callable object");
+        throw std::runtime_error("Callee is not a callable object: " + callee.toString());
     }
 }
 
@@ -2249,6 +2499,74 @@ void Interpreter::visit(ThisExpr*) {
     if (!found) {
         throw std::runtime_error("this binding unresolved");
     }
+}
+
+void Interpreter::runConstructorOn(const Value& objVal,
+                                   std::shared_ptr<ClassValue> ownerKlass,
+                                   ConstructorDecl* cDecl,
+                                   const std::vector<Value>& cArgs) {
+    auto callEnv = std::make_shared<Environment>(globals);
+    callEnv->define("this", objVal);
+    if (ownerKlass->parentClass) {
+        callEnv->define("super", Value{ownerKlass->parentClass});
+    }
+    for (size_t i = 0; i < cDecl->params.size() && i < cArgs.size(); ++i) {
+        callEnv->define(cDecl->params[i].name, cArgs[i]);
+    }
+
+    bool hasExplicitSuper = false;
+    for (const auto& initCall : cDecl->initializerList) {
+        auto callExpr = dynamic_cast<CallExpr*>(initCall.get());
+        if (!callExpr) continue;
+        auto ident = dynamic_cast<IdentifierExpr*>(callExpr->callee.get());
+        if (!ident) continue;
+        if (ident->name == "super") {
+            hasExplicitSuper = true;
+            auto prevEnv = this->environment;
+            this->environment = callEnv;
+            std::vector<Value> superArgs;
+            for (const auto& sArg : callExpr->arguments) superArgs.push_back(evaluate(sArg.get()));
+            this->environment = prevEnv;
+            ConstructorDecl* parentConstr = nullptr;
+            std::shared_ptr<ClassValue> parentKlass = ownerKlass->parentClass;
+            while (parentKlass) {
+                for (const auto& pc : parentKlass->decl->constructors)
+                    if (pc->params.size() == superArgs.size()) { parentConstr = pc.get(); break; }
+                if (parentConstr) break;
+                parentKlass = parentKlass->parentClass;
+            }
+            if (parentConstr) runConstructorOn(objVal, ownerKlass->parentClass, parentConstr, superArgs);
+        } else if (ident->name == "this") {
+            hasExplicitSuper = true;
+            auto prevEnv = this->environment;
+            this->environment = callEnv;
+            std::vector<Value> siblingArgs;
+            for (const auto& sArg : callExpr->arguments) siblingArgs.push_back(evaluate(sArg.get()));
+            this->environment = prevEnv;
+            ConstructorDecl* siblingConstr = nullptr;
+            for (const auto& sc : ownerKlass->decl->constructors)
+                if (sc->params.size() == siblingArgs.size()) { siblingConstr = sc.get(); break; }
+            if (siblingConstr) runConstructorOn(objVal, ownerKlass, siblingConstr, siblingArgs);
+        }
+    }
+    if (!hasExplicitSuper && ownerKlass->parentClass) {
+        ConstructorDecl* parentConstr = nullptr;
+        std::shared_ptr<ClassValue> parentKlass = ownerKlass->parentClass;
+        while (parentKlass) {
+            for (const auto& pc : parentKlass->decl->constructors)
+                if (pc->params.size() == 0) { parentConstr = pc.get(); break; }
+            if (parentConstr) break;
+            parentKlass = parentKlass->parentClass;
+        }
+        if (parentConstr) runConstructorOn(objVal, ownerKlass->parentClass, parentConstr, {});
+    }
+
+    auto prevEnv = this->environment;
+    this->environment = callEnv;
+    try {
+        executeBlock(dynamic_cast<BlockStmt*>(cDecl->body.get()), callEnv);
+    } catch (const ReturnSignal&) {}
+    this->environment = prevEnv;
 }
 
 void Interpreter::visit(SuperExpr* node) {

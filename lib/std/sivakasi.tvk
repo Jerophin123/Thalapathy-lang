@@ -1,0 +1,117 @@
+// sivakasi.tvk — THALAPATHY Math module
+// "Sivakasi vedi maadhiri — full firepower kanakku." 🎆
+// Conventional equivalent: math
+
+master _Sivakasi {
+    float PI;
+    float E;
+
+    mersal init() {
+        this.PI = 3.141592653589793;
+        this.E = 2.718281828459045;
+    }
+
+    // ver(x) — absolute value. Conventional: abs
+    mersal ver(float x) -> float {
+        ghilli (x < 0) { thiruppi -x; }
+        thiruppi x;
+    }
+
+    // mulai(x) — square root. Conventional: sqrt
+    mersal mulai(float x) -> float {
+        thiruppi __native_math_sqrt(x);
+    }
+
+    // power(base, exp) — base^exp for integer exp. Conventional: pow
+    mersal power(float base, int exp) -> float {
+        makkal res = 1.0;
+        makkal e = exp;
+        ghilli (e < 0) { e = -e; }
+        bigil (makkal i = 0; i < e; i = i + 1) {
+            res = res * base;
+        }
+        ghilli (exp < 0) { thiruppi 1.0 / res; }
+        thiruppi res;
+    }
+
+    // melae(x) — ceiling. Conventional: ceil
+    mersal melae(float x) -> float {
+        thiruppi __native_math_ceil(x);
+    }
+
+    // keezhae(x) — floor. Conventional: floor
+    mersal keezhae(float x) -> float {
+        thiruppi __native_math_floor(x);
+    }
+
+    // roundu(x) — round to nearest. Conventional: round
+    mersal roundu(float x) -> float {
+        thiruppi __native_math_floor(x + 0.5);
+    }
+
+    mersal sin(float x) -> float { thiruppi __native_math_sin(x); }
+    mersal cos(float x) -> float { thiruppi __native_math_cos(x); }
+    mersal tan(float x) -> float { thiruppi __native_math_sin(x) / __native_math_cos(x); }
+
+    // sirusu / perusu — min / max
+    mersal sirusu(float a, float b) -> float {
+        ghilli (a < b) { thiruppi a; }
+        thiruppi b;
+    }
+    mersal perusu(float a, float b) -> float {
+        ghilli (a > b) { thiruppi a; }
+        thiruppi b;
+    }
+
+    // naduvula(x, lo, hi) — clamp
+    mersal naduvula(float x, float lo, float hi) -> float {
+        ghilli (x < lo) { thiruppi lo; }
+        ghilli (x > hi) { thiruppi hi; }
+        thiruppi x;
+    }
+
+    // pothu(a, b) — gcd (common factor)
+    mersal pothu(int a, int b) -> int {
+        makkal x = a;
+        makkal y = b;
+        ghilli (x < 0) { x = -x; }
+        ghilli (y < 0) { y = -y; }
+        bigil (; y != 0;) {
+            makkal t = y;
+            y = x % y;
+            x = t;
+        }
+        thiruppi x;
+    }
+
+    // madangu(a, b) — lcm (least common multiple)
+    mersal madangu(int a, int b) -> int {
+        ghilli (a == 0) { thiruppi 0; }
+        ghilli (b == 0) { thiruppi 0; }
+        makkal g = this.pothu(a, b);
+        makkal r = (a / g) * b;
+        ghilli (r < 0) { thiruppi -r; }
+        thiruppi r;
+    }
+
+    // fact(n) — factorial
+    mersal fact(int n) -> int {
+        ghilli (n <= 1) { thiruppi 1; }
+        thiruppi n * this.fact(n - 1);
+    }
+
+    // primeah(n) — is prime?  Conventional: isPrime
+    mersal primeah(int n) -> bool {
+        ghilli (n < 2) { thiruppi false; }
+        makkal i = 2;
+        bigil (; i * i <= n; i = i + 1) {
+            ghilli (n % i == 0) { thiruppi false; }
+        }
+        thiruppi true;
+    }
+
+    mersal degrees(float r) -> float { thiruppi r * 180.0 / this.PI; }
+    mersal radians(float d) -> float { thiruppi d * this.PI / 180.0; }
+}
+
+makkal sivakasi = _Sivakasi();

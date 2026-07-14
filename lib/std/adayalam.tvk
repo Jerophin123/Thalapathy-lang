@@ -1,0 +1,31 @@
+// adayalam.tvk — THALAPATHY unique identifiers (UUID-style)
+// "Ovvoru record-ukum thani adayalam venum da." 🪪
+// Conventional equivalent: UUID. NOTE: uses the non-cryptographic `deva`/random
+// source — good for ids, NOT for security tokens (use a secure source for those).
+
+master _Adayalam {
+    string _hexChars;
+    mersal init() { naan._hexChars = "0123456789abcdef"; }
+
+    mersal _hex(int n) -> string { thiruppi naan._hexChars.charAt(n); }
+
+    // pudhu() — generate a fresh 36-char id (8-4-4-4-12, version-4 shaped). Conventional: uuid4
+    mersal pudhu() -> string {
+        makkal s = "";
+        bigil (makkal i = 0; i < 32; i = i + 1) {
+            makkal d = __native_random_int(0, 15);
+            ghilli (i == 12) { d = 4; }          // version nibble
+            ghilli (i == 16) { d = 8; }          // variant nibble (8..b -> use 8)
+            s = s + naan._hex(d);
+        }
+        thiruppi s.substring(0, 8) + "-" + s.substring(8, 4) + "-" +
+                 s.substring(12, 4) + "-" + s.substring(16, 4) + "-" + s.substring(20, 12);
+    }
+
+    // sariyaa(id) — basic shape validation. Conventional: validate
+    mersal sariyaa(string id) -> bool {
+        thiruppi len(id) == 36;
+    }
+}
+
+makkal adayalam = _Adayalam();

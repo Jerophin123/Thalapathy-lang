@@ -8,7 +8,7 @@ namespace thalapathy {
 class CLI {
 public:
     static int run(const std::vector<std::string>& args);
-    static int executeFile(const std::string& filepath, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput);
+    static int executeFile(const std::string& filepath, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput, bool reloadMode = false);
 
 private:
     static void printHelp();

@@ -1,0 +1,58 @@
+// thalaiva_syntax.tvk — canonical THALAPATHY syntax showcase 🔥
+// Every construct here is IMPLEMENTED and runs. Legacy English spellings
+// (true/false/null/this/in/break/continue) still work as compat aliases,
+// but canonical THALAPATHY spelling is primary.
+sarkar sivakasi;
+sarkar kootu;
+
+// master + varisu (inheritance); naan == this
+master Nadigan {
+    string peru;
+    mersal init(string peru) { naan.peru = peru; }
+    mersal introduce() -> string { thiruppi "Naan " + naan.peru; }
+}
+
+master Thalapathy varisu Nadigan {
+    mersal init(string peru) { naan.peru = peru; }
+    mersal punch() -> string {
+        thiruppi naan.introduce() + " — once I commit, I never look back!";
+    }
+}
+
+thalapathy aarambam {
+    // Canonical literals: aama / illa / onnumilla
+    nanba ready = aama;          // true
+    nanba failed = illa;         // false
+    nanba pending = onnumilla;   // null
+    uruthi MASS_LEVEL = 100;     // constant
+    makkal score = 0;            // mutable
+
+    ghilli (ready == aama) {
+        sollu("Ready da nanba! MASS_LEVEL =", MASS_LEVEL);
+    } illana {
+        sollu("Innum ready illa...");
+    }
+    sollu("failed:", failed, "| pending:", pending);
+
+    // vaathi ... ulla (canonical foreach); interval == break, aduthu == continue
+    nanba padangal = ["Ghilli", "Pokkiri", "Leo", "Master", "Villu"];
+    vaathi padam ulla padangal {
+        ghilli (padam == "Leo") { aduthu; }     // continue
+        ghilli (padam == "Master") { interval; } // break
+        sollu("padam:", padam);
+        score = score + 1;
+    }
+    sollu("counted before interval:", score);
+
+    // stdlib + lambda + functional
+    sollu("[sivakasi] mulai(196) =", sivakasi.mulai(196.0));
+    nanba nums = [42, 7, 23, 4, 16];
+    nanba evens = kootu.vadikattu(nums, kutty (n) { thiruppi n % 2 == 0; });
+    sollu("[kootu] evens =", evens.join(", "));
+
+    // OOP + inheritance + naan
+    nanba hero = Thalapathy("Vijay");
+    sollu(hero.punch());
+
+    sollu("Idhu THALAPATHY da. 🔥");
+}

@@ -1,0 +1,30 @@
+// yaaru.tvk — THALAPATHY reflection ("Yaaru nee?")
+// "Value-va paathu 'yaaru nee' nu ketta, adhu type sollum." 🕵️
+// Conventional equivalent: type introspection.
+// NOTE: value-level reflection is real today. Deep reflection of a user class's
+// methods/fields needs VEAF metadata and is staged (see ROADMAP).
+
+master _Yaarunee {
+    // enna(v) — the runtime type name. Conventional: typeName
+    // (int/float/bool/char/string/array/map/function/class/instance/<enum>)
+    // (named `enna`, not `vagai`, because `vagai` is a reserved keyword.)
+    mersal enna(any v) -> string { thiruppi type(v); }
+
+    mersal kaaliyaa(any v) -> bool { thiruppi v == onnumilla; }           // isNull
+    mersal ennaah(any v) -> bool { thiruppi type(v) == "int"; }           // isInt
+    mersal decimalaah(any v) -> bool { thiruppi type(v) == "float"; }     // isFloat
+    mersal soldaah(any v) -> bool { thiruppi type(v) == "string"; }       // isString
+    mersal pattiyalaah(any v) -> bool { thiruppi type(v) == "array"; }    // isList
+    mersal varaipadamaah(any v) -> bool { thiruppi type(v) == "map"; }    // isMap
+    mersal masterah(any v) -> bool { thiruppi type(v) == "instance"; }    // isObject
+    mersal azhaikkalaam(any v) -> bool {                                   // isCallable
+        makkal t = type(v);
+        thiruppi t == "function";
+    }
+    mersal suttralaam(any v) -> bool {                                     // isIterable
+        makkal t = type(v);
+        thiruppi t == "array" || t == "string" || t == "map";
+    }
+}
+
+makkal yaarunee = _Yaarunee();

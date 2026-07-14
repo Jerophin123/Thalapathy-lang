@@ -1,0 +1,71 @@
+// kootam.tvk — THALAPATHY Collections module
+// "Kootam koodikitte irukku — Adukku, Varisai, Thani Kootam." 👥
+// Conventional equivalents noted per class.
+
+// Adukku — LIFO Stack
+master Adukku {
+    any items;
+    mersal init() { this.items = []; }
+    mersal serthu(any x) { this.items.push(x); }        // push
+    mersal eduthudu() -> any { thiruppi this.items.pop(); } // pop (top)
+    mersal mun() -> any {                             // peek top
+        thiruppi this.items[len(this.items) - 1];
+    }
+    mersal evlo() -> int { thiruppi len(this.items); }
+    mersal kaaliya() -> bool { thiruppi len(this.items) == 0; }
+    mersal irukka(any x) -> bool { thiruppi this.items.contains(x); }
+}
+
+// Varisai — FIFO Queue (head pointer, no O(n) shifting)
+master Varisai {
+    any items;
+    int head;
+    mersal init() { this.items = []; this.head = 0; }
+    mersal serthu(any x) { this.items.push(x); }        // enqueue
+    mersal eduthudu() -> any {                           // dequeue (front)
+        makkal v = this.items[this.head];
+        this.head = this.head + 1;
+        thiruppi v;
+    }
+    mersal mun() -> any { thiruppi this.items[this.head]; } // front
+    mersal evlo() -> int { thiruppi len(this.items) - this.head; }
+    mersal kaaliya() -> bool { thiruppi this.head >= len(this.items); }
+}
+
+// ThaniKootam — Set of unique members
+master ThaniKootam {
+    any items;
+    mersal init() { this.items = []; }
+    mersal serthu(any x) {                               // add if absent
+        ghilli (!this.items.contains(x)) { this.items.push(x); }
+    }
+    mersal irukka(any x) -> bool { thiruppi this.items.contains(x); }
+    mersal evlo() -> int { thiruppi len(this.items); }
+    mersal pattiyal() -> any { thiruppi this.items; }    // as list
+}
+
+// IruTalai — double-ended Deque
+master IruTalai {
+    any items;
+    int head;
+    mersal init() { this.items = []; this.head = 0; }
+    mersal serthuPin(any x) { this.items.push(x); }      // push back
+    mersal eduthuduPin() -> any { thiruppi this.items.pop(); } // pop back
+    mersal mun() -> any { thiruppi this.items[this.head]; }
+    mersal eduthuduMun() -> any {                         // pop front
+        makkal v = this.items[this.head];
+        this.head = this.head + 1;
+        thiruppi v;
+    }
+    mersal evlo() -> int { thiruppi len(this.items) - this.head; }
+}
+
+// kootam.* factory identity
+master _Kootam {
+    mersal adukku() -> any { thiruppi Adukku(); }
+    mersal varisai() -> any { thiruppi Varisai(); }
+    mersal thaniKootam() -> any { thiruppi ThaniKootam(); }
+    mersal iruTalai() -> any { thiruppi IruTalai(); }
+}
+
+makkal kootam = _Kootam();

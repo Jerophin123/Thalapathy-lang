@@ -13,6 +13,10 @@
 #include <sstream>
 #include <filesystem>
 #include <algorithm>
+#include <thread>
+#include <chrono>
+#include <map>
+#include "thalapathy/net/Net.hpp"
 
 namespace thalapathy {
 
@@ -34,6 +38,7 @@ int CLI::run(const std::vector<std::string>& args) {
     std::string filepath = "";
     std::string customOutPath = "";
     bool jsonOutput = false;
+    bool reloadMode = false;
     PersonalityMode mode = PersonalityMode::Professional;
 
     bool modeNext = false;
@@ -70,6 +75,8 @@ int CLI::run(const std::vector<std::string>& args) {
             outNext = true;
         } else if (arg == "--json") {
             jsonOutput = true;
+        } else if (arg == "--reload") {
+            reloadMode = true;
         } else if (arg == "--check") {
             if (!command.empty()) { std::cerr << "error: conflicting primary operations\n"; return 1; }
             command = "check";
@@ -138,7 +145,7 @@ int CLI::run(const std::vector<std::string>& args) {
     bool buildOnly = (command == "build");
     bool emitIr = (command == "emit-ir");
 
-    return executeFile(filepath, mode, onlyCheck, buildOnly, emitIr, customOutPath, jsonOutput);
+    return executeFile(filepath, mode, onlyCheck, buildOnly, emitIr, customOutPath, jsonOutput, reloadMode);
 }
 
 void CLI::printHelp() {
@@ -219,11 +226,12 @@ static const char* getOpcodeName(OpCode op) {
         case OpCode::GET_FIELD: return "GET_FIELD";
         case OpCode::SET_FIELD: return "SET_FIELD";
         case OpCode::THROW: return "THROW";
+        case OpCode::AWAIT: return "AWAIT";
         default: return "UNKNOWN";
     }
 }
 
-int CLI::executeFile(const std::string& filepath_orig, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput) {
+int CLI::executeFile(const std::string& filepath_orig, PersonalityMode mode, bool onlyCheck, bool buildOnly, bool emitIr, const std::string& customOutPath, bool jsonOutput, bool reloadMode) {
     (void)mode;
     namespace fs = std::filesystem;
     std::string filepath = filepath_orig;
@@ -395,11 +403,111 @@ int CLI::executeFile(const std::string& filepath_orig, PersonalityMode mode, boo
         return 0;
     }
 
-    Interpreter interpreter;
-    for (const auto& modPath : graph.getLoadOrder()) {
-        const auto& nodes = graph.getModules().at(modPath)->astNodes;
-        interpreter.interpret(nodes);
+    if (reloadMode) {
+#ifdef _WIN32
+        _putenv_s("THALAIVALAI_ENV", "reload");
+#else
+        setenv("THALAIVALAI_ENV", "reload", 1);
+#endif
     }
+
+    std::map<std::string, std::filesystem::file_time_type> fileTimes;
+    if (reloadMode) {
+        for (const auto& f : graph.getLoadOrder()) {
+            try { fileTimes[f] = fs::last_write_time(f); } catch(...) {}
+        }
+        net::g_reload_check = [graphFiles = graph.getLoadOrder(), fileTimes, canonicalEntry]() mutable -> bool {
+            namespace fs = std::filesystem;
+            for (const auto& f : graphFiles) {
+                try {
+                    auto current = fs::last_write_time(f);
+                    auto it = fileTimes.find(f);
+                    if (it != fileTimes.end() && current > it->second) {
+                        fileTimes[f] = current;
+                        std::cout << "\nRasigan mode: File change detected in " << fs::path(f).filename().string() << "! Reloading... \U0001F504\U0001F525\n";
+                        return true;
+                    }
+                } catch (...) {}
+            }
+            return false;
+        };
+    }
+
+    bool firstRun = true;
+    do {
+        if (!firstRun) {
+            std::vector<std::string> graphErrors;
+            graph = ModuleGraph{}; // reset
+            if (!graph.buildGraph(canonicalEntry, graphErrors)) {
+                for (const auto& err : graphErrors) std::cerr << err << "\n";
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                continue;
+            }
+            // Reset resolver and re-resolve
+            Resolver resolver(filepath, "");
+            bool resolved = true;
+            for (const auto& modPath : graph.getLoadOrder()) {
+                const auto& nodes = graph.getModules().at(modPath)->astNodes;
+                bool isEntry = (modPath == canonicalEntry);
+                if (!resolver.resolve(nodes, isEntry)) resolved = false;
+            }
+            if (!resolved) {
+                for (const auto& diag : resolver.getDiagnostics()) {
+                    std::string modSource = readWholeFile(diag.span.filename);
+                    std::cerr << PersonalityEngine::decorate(diag, DiagnosticRenderer::render(diag, modSource));
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                continue;
+            }
+            // Re-setup file times on successful build
+            for (const auto& f : graph.getLoadOrder()) {
+                try { fileTimes[f] = fs::last_write_time(f); } catch(...) {}
+            }
+            // Re-create the reload check callback capturing the new load order
+            net::g_reload_check = [graphFiles = graph.getLoadOrder(), fileTimes, canonicalEntry]() mutable -> bool {
+                namespace fs = std::filesystem;
+                for (const auto& f : graphFiles) {
+                    try {
+                        auto current = fs::last_write_time(f);
+                        auto it = fileTimes.find(f);
+                        if (it != fileTimes.end() && current > it->second) {
+                            fileTimes[f] = current;
+                            std::cout << "\nRasigan mode: File change detected in " << fs::path(f).filename().string() << "! Reloading... \U0001F504\U0001F525\n";
+                            return true;
+                        }
+                    } catch (...) {}
+                }
+                return false;
+            };
+        }
+        firstRun = false;
+
+        Interpreter interpreter;
+        try {
+            for (const auto& modPath : graph.getLoadOrder()) {
+                const auto& nodes = graph.getModules().at(modPath)->astNodes;
+                interpreter.interpret(nodes);
+            }
+            if (reloadMode) {
+                while (true) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    if (net::g_reload_check && net::g_reload_check()) {
+                        break;
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "error: " << e.what() << "\n";
+            if (reloadMode) {
+                while (true) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    if (net::g_reload_check && net::g_reload_check()) break;
+                }
+            } else {
+                return 1;
+            }
+        }
+    } while (reloadMode);
     return 0;
 }
 

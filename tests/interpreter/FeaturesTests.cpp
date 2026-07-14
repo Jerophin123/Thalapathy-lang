@@ -296,3 +296,117 @@ TEST_CASE("Scanner class reads and parses input streams", "[features][io][scanne
     CHECK(std::get<bool>(vHasMore.val) == false);
 }
 
+// ---- Canonical THALAPATHY syntax + new language features ----
+
+TEST_CASE("canonical literals aama/illa/onnumilla and naan", "[canonical][literals]") {
+    std::string src =
+        "makkal result = 0;\n"
+        "master Box { int v; mersal init(int v) { naan.v = v; } }\n"
+        "thalapathy aarambam {\n"
+        "    nanba a = aama; nanba b = illa; nanba c = onnumilla;\n"
+        "    ghilli (a == true) { result = result + 1; }\n"
+        "    ghilli (b == false) { result = result + 10; }\n"
+        "    ghilli (c == null) { result = result + 100; }\n"
+        "    makkal box = Box(5);\n"
+        "    result = result + box.v;\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<long long>(v.val) == 116LL);
+}
+
+TEST_CASE("&& and || short-circuit (no OOB on guarded index)", "[canonical][shortcircuit]") {
+    std::string src =
+        "makkal result = 0;\n"
+        "thalapathy aarambam {\n"
+        "    makkal arr = [5];\n"
+        "    makkal j = -1;\n"
+        "    ghilli (j >= 0 && arr[j] > 0) { result = 1; } illana { result = 2; }\n"
+        "    ghilli (result == 2 || arr[99] > 0) { result = result + 10; }\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<long long>(v.val) == 12LL);
+}
+
+TEST_CASE("nanbi array destructuring binds each element", "[nanbi][destructuring]") {
+    std::string src =
+        "makkal result = 0;\n"
+        "thalapathy aarambam {\n"
+        "    nanbi [a, b, c] = [10, 20, 30];\n"
+        "    result = a + b + c;\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<long long>(v.val) == 60LL);
+}
+
+TEST_CASE("nanbi rest binding collects the remainder", "[nanbi][rest]") {
+    std::string src =
+        "makkal result = 0;\n"
+        "thalapathy aarambam {\n"
+        "    nanbi [first, _, ...rest] = [1, 2, 3, 4, 5];\n"
+        "    result = first + len(rest);\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<long long>(v.val) == 4LL); // 1 + len([3,4,5])
+}
+
+TEST_CASE("nanbi object destructuring with alias", "[nanbi][object]") {
+    std::string src =
+        "makkal result = \"\";\n"
+        "thalapathy aarambam {\n"
+        "    nanba hero = { peru: \"Vijay\", title: \"Thalapathy\" };\n"
+        "    nanbi { peru, title: pattam } = hero;\n"
+        "    result = peru + \"/\" + pattam;\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<std::string>(v.val) == "Vijay/Thalapathy");
+}
+
+TEST_CASE("yaaru pattern matching selects the ivan arm", "[match][yaaru]") {
+    std::string src =
+        "makkal result = \"\";\n"
+        "thalapathy aarambam {\n"
+        "    makkal n = 2;\n"
+        "    yaaru n {\n"
+        "        ivan 1 { result = \"one\"; }\n"
+        "        ivan 2 { result = \"two\"; }\n"
+        "        yaarumilla { result = \"other\"; }\n"
+        "    }\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<std::string>(v.val) == "two");
+}
+
+TEST_CASE("yaaru falls through to yaarumilla default", "[match][yaaru]") {
+    std::string src =
+        "makkal result = \"\";\n"
+        "thalapathy aarambam {\n"
+        "    makkal s = \"Leo\";\n"
+        "    yaaru s {\n"
+        "        ivan \"Ghilli\" { result = \"2004\"; }\n"
+        "        yaarumilla { result = \"other\"; }\n"
+        "    }\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<std::string>(v.val) == "other");
+}
+
+TEST_CASE("comeback override + munnadi.aarambam parent constructor", "[oop][comeback][super]") {
+    std::string src =
+        "makkal result = \"\";\n"
+        "master Base {\n"
+        "    string p;\n"
+        "    mersal init(string p) { naan.p = p; }\n"
+        "    mersal who() -> string { thiruppi naan.p; }\n"
+        "}\n"
+        "master Sub varisu Base {\n"
+        "    mersal init(string p) { munnadi.aarambam(p); }\n"
+        "    comeback mersal who() -> string { thiruppi \"sub:\" + munnadi.who(); }\n"
+        "}\n"
+        "thalapathy aarambam {\n"
+        "    makkal s = Sub(\"Vijay\");\n"
+        "    result = s.who();\n"
+        "}\n";
+    Value v = runAndGet(src, "result");
+    CHECK(std::get<std::string>(v.val) == "sub:Vijay");
+}
+

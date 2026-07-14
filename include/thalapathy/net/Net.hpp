@@ -6,6 +6,12 @@
 namespace thalapathy {
 namespace net {
 
+#ifdef _WIN32
+using socket_t = unsigned __int64;
+#else
+using socket_t = int;
+#endif
+
 // Parsed HTTP request handed to a THALAPATHY route handler.
 struct HttpRequest {
     std::string method;   // GET, POST, ...
@@ -13,6 +19,7 @@ struct HttpRequest {
     std::string query;    // raw query string (after '?')
     std::string body;     // request body
     std::map<std::string, std::string> headers;
+    long long socketId = 0;
 };
 
 // Response a handler asks the server to send back.
@@ -41,6 +48,18 @@ HttpResult httpRequest(const std::string& verb, const std::string& url,
 // The loop runs until the process is terminated.
 using RouteHandler = std::function<HttpResponse(const HttpRequest&)>;
 bool httpServe(int port, const RouteHandler& handler);
+
+extern std::function<bool()> g_reload_check;
+
+bool wsUpgrade(socket_t client, const std::map<std::string, std::string>& headers);
+bool wsSend(socket_t client, const std::string& message);
+std::string wsRecv(socket_t client, bool& closed);
+
+bool sseUpgrade(socket_t client);
+bool sseSend(socket_t client, const std::string& data);
+
+bool socketIsClosed(socket_t client);
+void socketClose(socket_t client);
 
 } // namespace net
 } // namespace thalapathy

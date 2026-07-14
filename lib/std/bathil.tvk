@@ -1,0 +1,34 @@
+// bathil.tvk — THALAIVALAI HTTP response helpers
+// "Response thiruppi anuppu nanba — handler speech mudichitu stage-la nikkudhu." 🎤
+// Conventional equivalent: response builders (text / html / json / redirect)
+
+master _Bathil {
+    // urai(text) — plain text response
+    mersal urai(string text) -> any {
+        thiruppi { status: 200, body: text, contentType: "text/plain; charset=utf-8" };
+    }
+
+    // kaattu(html) — HTML response
+    mersal kaattu(string html) -> any {
+        thiruppi { status: 200, body: html, contentType: "text/html; charset=utf-8" };
+    }
+
+    // jilla(obj) — JSON response
+    mersal jilla(any obj) -> any {
+        thiruppi { status: 200, body: __native_json_stringify(obj), contentType: "application/json" };
+    }
+
+    // nilai(code, body) — HTML body with a custom status code
+    mersal nilai(int code, string body) -> any {
+        thiruppi { status: code, body: body, contentType: "text/html; charset=utf-8" };
+    }
+
+    // thiruppuVazhi(location) — 302 redirect
+    mersal thiruppuVazhi(string location) -> any {
+        makkal h = {};
+        h.set("Location", location);
+        thiruppi { status: 302, body: "", contentType: "text/html", headers: h };
+    }
+}
+
+makkal bathil = _Bathil();

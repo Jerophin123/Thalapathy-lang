@@ -1,0 +1,35 @@
+// THALAIVALAI demo — HTML + CSS + JS + a JSON API, all served THALAPATHY-style.
+//   thalapathy examples/web/02_alangaaram/main.tvk
+//   then open http://localhost:8080
+sarkar thalaivalai;
+sarkar bathil;
+
+thalapathy aarambam {
+    nanba app = thalaivalai.pudhu();
+
+    // Static asset mounts
+    app.sotthu("/alangaaram", "examples/web/02_alangaaram/alangaaram");
+    app.sotthu("/nadanam", "examples/web/02_alangaaram/nadanam");
+    app.paarvaiIdam("examples/web/02_alangaaram/paarvai");
+
+    // Home page (rendered HTML view)
+    app.kelu("/", kutty (kelvi) {
+        thiruppi app.kaattu("veedu.html", onnumilla);
+    });
+
+    // JSON REST API
+    app.kelu("/api/heroes", kutty (kelvi) {
+        thiruppi bathil.jilla([
+            { peru: "Ghilli", varudam: 2004 },
+            { peru: "Thuppakki", varudam: 2012 },
+            { peru: "Leo", varudam: 2023 }
+        ]);
+    });
+
+    // Dynamic route with a <peru> param
+    app.kelu("/hero/<peru>", kutty (kelvi) {
+        thiruppi bathil.urai("Vanakkam " + kelvi.vazhiThunai("peru") + " nanba!");
+    });
+
+    app.oduda(8080);
+}

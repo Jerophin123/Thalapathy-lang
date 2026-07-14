@@ -17,6 +17,8 @@ public:
 
     // Visitor methods
     void visit(VarDecl* node) override;
+    void visit(NanbiDecl* node) override;
+    void visit(MatchStmt* node) override;
     void visit(FuncDecl* node) override;
     void visit(ClassDecl* node) override;
     void visit(EntryBlockDecl* node) override;

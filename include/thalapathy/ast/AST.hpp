@@ -29,6 +29,24 @@ struct VarDecl : public DeclNode {
     void accept(ASTVisitor* visitor) override;
 };
 
+// nanbi — immutable destructuring / pattern binding.
+//   nanbi [a, b, ...rest] = expr;   (array/tuple pattern)
+//   nanbi {peru, title} = expr;     (object/map pattern, optional `key: alias`)
+struct NanbiBinding {
+    enum class Kind { Name, Ignore, Rest };
+    Kind kind = Kind::Name;
+    std::string name;   // identifier bound ("" for Ignore)
+    std::string key;    // object-pattern source key (defaults to `name`)
+};
+
+struct NanbiDecl : public DeclNode {
+    bool isObjectPattern = false;            // {..} => true, [..] => false
+    std::vector<NanbiBinding> bindings;
+    std::unique_ptr<ASTNode> initializer;
+
+    void accept(ASTVisitor* visitor) override;
+};
+
 struct FuncDecl : public DeclNode {
     std::string name;
     struct Param {
@@ -39,6 +57,7 @@ struct FuncDecl : public DeclNode {
     std::vector<Param> params;
     std::string returnTypeStr;
     std::unique_ptr<ASTNode> body; // usually a BlockStmt
+    bool isAsync = false;
 
     void accept(ASTVisitor* visitor) override;
 };
@@ -170,9 +189,25 @@ struct RangeLoopStmt : public StmtNode {
 
 // foreach: `vaathi x in <iterable>` over arrays, strings, or map keys.
 struct ForEachStmt : public StmtNode {
-    std::string varName;
+    std::string varName;                       // used when !hasPattern
+    bool hasPattern = false;                   // `vaathi nanbi [a,b] ulla ...`
+    bool patternIsObject = false;
+    std::vector<NanbiBinding> patternBindings;
     std::unique_ptr<ASTNode> iterable;
     std::unique_ptr<ASTNode> body;
+
+    void accept(ASTVisitor* visitor) override;
+};
+
+// yaaru <subject> { ivan <pattern> { .. } ... yaarumilla { .. } }
+struct MatchArm {
+    std::unique_ptr<ASTNode> pattern;  // value expression compared for equality
+    std::unique_ptr<ASTNode> body;     // block
+};
+struct MatchStmt : public StmtNode {
+    std::unique_ptr<ASTNode> subject;
+    std::vector<MatchArm> arms;
+    std::unique_ptr<ASTNode> defaultBody; // yaarumilla (optional)
 
     void accept(ASTVisitor* visitor) override;
 };
@@ -412,10 +447,17 @@ struct ASTVisitor {
     virtual void visit(LambdaExpr* node) = 0;
     virtual void visit(ThisExpr* node) = 0;
     virtual void visit(SuperExpr* node) = 0;
+
+    // Non-pure defaults so existing visitors need not change; visitors that care
+    // (Interpreter, Resolver) override these.
+    virtual void visit(NanbiDecl* /*node*/) {}
+    virtual void visit(MatchStmt* /*node*/) {}
 };
 
 // Out-of-line implementations of accept to avoid circular dependencies
 inline void VarDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void NanbiDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
+inline void MatchStmt::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void FuncDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void ClassDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }
 inline void EntryBlockDecl::accept(ASTVisitor* visitor) { visitor->visit(this); }

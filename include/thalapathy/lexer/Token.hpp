@@ -19,6 +19,11 @@ enum class TokenType {
     THALAPATHY,
     AARAMBAM,
     NANBA,
+    NANBI,
+    COMEBACK,
+    YAARU,
+    IVAN,
+    YAARUMILLA,
     MAKKAL,
     URUTHI,
     GHILLI,
@@ -46,6 +51,8 @@ enum class TokenType {
     NADU,
     VAGAI,
     KADAISI,
+    VARUM,
+    KAATHIRU,
 
     // Conventional technical keywords
     INT_TYPE,
@@ -129,6 +136,11 @@ inline std::string_view tokenTypeToString(TokenType type) {
         case TokenType::THALAPATHY: return "thalapathy";
         case TokenType::AARAMBAM: return "aarambam";
         case TokenType::NANBA: return "nanba";
+        case TokenType::NANBI: return "nanbi";
+        case TokenType::COMEBACK: return "comeback";
+        case TokenType::YAARU: return "yaaru";
+        case TokenType::IVAN: return "ivan";
+        case TokenType::YAARUMILLA: return "yaarumilla";
         case TokenType::MAKKAL: return "makkal";
         case TokenType::URUTHI: return "uruthi";
         case TokenType::GHILLI: return "ghilli";
@@ -156,6 +168,8 @@ inline std::string_view tokenTypeToString(TokenType type) {
         case TokenType::NADU: return "nadu";
         case TokenType::VAGAI: return "vagai";
         case TokenType::KADAISI: return "kadaisi";
+        case TokenType::VARUM: return "varum";
+        case TokenType::KAATHIRU: return "kaathiru";
         case TokenType::QUESTION: return "?";
         case TokenType::INT_TYPE: return "int";
         case TokenType::FLOAT_TYPE: return "float";

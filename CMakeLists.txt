@@ -119,6 +119,7 @@ add_executable(thalapathy_tests
     tests/semantic/ResolverTests.cpp
     tests/interpreter/InterpreterTests.cpp
     tests/interpreter/FeaturesTests.cpp
+    tests/interpreter/AsyncThalaivalaiTests.cpp
     tests/runtime/RuntimeTests.cpp
     tests/diagnostics/DiagnosticsTests.cpp
     tests/personality/PersonalityTests.cpp
@@ -168,23 +169,9 @@ install(FILES
 install(FILES conf/formatter.conf
         DESTINATION conf)
 
-# 5. Standard library -> lib/std/
-install(FILES
-        lib/std/io.tvk
-        lib/std/math.tvk
-        lib/std/text.tvk
-        lib/std/collections.tvk
-        lib/std/time.tvk
-        lib/std/json.tvk
-        lib/std/http.tvk
-        lib/std/web.tvk
-        lib/std/random.tvk
-        lib/std/os.tvk
-        lib/std/db.tvk
-        lib/std/regex.tvk
-        lib/std/datetime.tvk
-        lib/std/log.tvk
-        DESTINATION lib/std)
+install(DIRECTORY lib/std/
+        DESTINATION lib/std
+        FILES_MATCHING PATTERN "*.tvk")
 
 # 6. VS Code extension -> tools/vscode/
 install(DIRECTORY editors/vscode-thalapathy
@@ -215,19 +202,39 @@ install(FILES
 
 # 8. Documentation -> docs/
 install(FILES
+        docs/assets/readme-banner.svg
+        docs/README.md
+        docs/TRIBUTE.md
         docs/TDK.md
         docs/TDK_COMMANDS.md
         docs/TDK_INSTALLATION.md
         docs/LANGUAGE_SPEC.md
         docs/LANGUAGE_GUIDE.md
+        docs/GRAMMAR.md
+        docs/TYPE_SYSTEM.md
         docs/MODULE_SYSTEM.md
+        docs/MEMORY_MODEL.md
+        docs/DIAGNOSTICS.md
         docs/STANDARD_LIBRARY.md
+        docs/THALAPATHY_API_LEXICON.md
+        docs/VIJAY_STDLIB_NAMING_MATRIX.md
+        docs/THALAPATHY_ACTION_VOCABULARY.md
+        docs/THALAPATHY_IDENTITY_AUDIT.md
+        docs/THALAPATHY_REFERENCES.md
+        docs/NANBA_NANBI.md
+        docs/THALAIVALAI_WEB.md
+        docs/ASYNC_DESIGN.md
+        docs/TOOLCHAIN.md
         docs/VIJAY_BINARY_FORMAT.md
+        docs/IR_SPEC.md
+        docs/NATIVE_RUNTIME_BRIDGE.md
+        docs/ROADMAP.md
+        docs/POLITICAL_SATIRE.md
         DESTINATION docs)
 
 # 9. Examples -> examples/
 install(DIRECTORY examples/hello examples/oop examples/modules examples/stdlib
-                  examples/web examples/packages
+                  examples/web examples/packages examples/mass
         DESTINATION examples)
 
 # 10. Legal -> legal/
@@ -237,4 +244,4 @@ install(FILES legal/THIRD_PARTY_NOTICES.md DESTINATION legal)
 # 11. Root metadata
 install(FILES VERSION DESTINATION .)
 install(FILES RELEASE.json DESTINATION .)
-install(FILES README.md DESTINATION .)
+install(FILES README.md CHANGELOG.md SECURITY.md DESTINATION .)

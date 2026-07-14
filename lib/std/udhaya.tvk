@@ -1,0 +1,53 @@
+// udhaya.tvk — THALAPATHY Path module
+// "Udhaya... ellaa vazhi-yum illa-thaan mudhal adi." 🛣️
+// Conventional equivalent: path (POSIX-style, "/" separated)
+
+master _Udhaya {
+    // seru(a, b) — join two path segments. Conventional: join
+    mersal seru(string a, string b) -> string {
+        ghilli (len(a) == 0) { thiruppi b; }
+        ghilli (a.endsWith("/")) { thiruppi a + b; }
+        thiruppi a + "/" + b;
+    }
+
+    // peru(p) — final component (file name). Conventional: filename
+    mersal peru(string p) -> string {
+        makkal parts = __native_string_split(p, "/");
+        thiruppi parts[len(parts) - 1];
+    }
+
+    // periyaVeedu(p) — parent directory. Conventional: parent
+    mersal periyaVeedu(string p) -> string {
+        makkal parts = __native_string_split(p, "/");
+        ghilli (len(parts) <= 1) { thiruppi ""; }
+        makkal parent = "";
+        bigil (makkal i = 0; i < len(parts) - 1; i = i + 1) {
+            ghilli (i > 0) { parent = parent + "/"; }
+            parent = parent + parts[i];
+        }
+        thiruppi parent;
+    }
+
+    // vagaipeyar(p) — file extension without dot. Conventional: extension
+    mersal vagaipeyar(string p) -> string {
+        makkal name = this.peru(p);
+        makkal dots = __native_string_split(name, ".");
+        ghilli (len(dots) <= 1) { thiruppi ""; }
+        thiruppi dots[len(dots) - 1];
+    }
+
+    // adippeyar(p) — file name without extension. Conventional: stem
+    mersal adippeyar(string p) -> string {
+        makkal name = this.peru(p);
+        makkal dots = __native_string_split(name, ".");
+        ghilli (len(dots) <= 1) { thiruppi name; }
+        makkal stem = "";
+        bigil (makkal i = 0; i < len(dots) - 1; i = i + 1) {
+            ghilli (i > 0) { stem = stem + "."; }
+            stem = stem + dots[i];
+        }
+        thiruppi stem;
+    }
+}
+
+makkal udhaya = _Udhaya();

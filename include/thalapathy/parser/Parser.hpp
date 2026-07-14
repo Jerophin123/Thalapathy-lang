@@ -46,6 +46,10 @@ private:
     std::unique_ptr<ASTNode> declaration();
     std::unique_ptr<ASTNode> entryBlockDeclaration();
     std::unique_ptr<VarDecl> variableDeclaration(bool isImmutable, bool isConstant);
+    std::unique_ptr<NanbiDecl> nanbiDeclaration();
+    void parseNanbiPattern(bool& isObjectPattern, std::vector<NanbiBinding>& out);
+    std::unique_ptr<ASTNode> matchStatement();
+    std::unique_ptr<ConstructorDecl> parseConstructorRest(const SourceSpan& span);
     std::unique_ptr<FuncDecl> functionDeclaration();
     std::unique_ptr<ClassDecl> classDeclaration();
     std::unique_ptr<ClassDecl> classDeclaration(bool isAbstractClass, bool isFinalClass);
@@ -72,7 +76,7 @@ private:
     // Expressions (Pratt Parsing)
     std::unique_ptr<ASTNode> expression(Precedence precedence = Precedence::NONE);
     std::unique_ptr<ASTNode> parsePrefix(const Token& token);
-    std::unique_ptr<ASTNode> lambdaExpression(const Token& kuttyToken);
+    std::unique_ptr<ASTNode> lambdaExpression(const Token& kuttyToken, bool isAsync = false);
     std::unique_ptr<ASTNode> parseInfix(const Token& token, std::unique_ptr<ASTNode> left);
     Precedence getPrecedence(TokenType type) const;
 

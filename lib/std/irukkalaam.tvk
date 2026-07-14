@@ -1,0 +1,47 @@
+// irukkalaam.tvk — THALAPATHY Option + Result types
+// "Irukkalaam, illaama irukkalaam — but nee check pannitu edu nanba." 🎁
+// Conventional equivalents: Option/Optional and Result.
+
+// Irukkalaam<T> — a value that may or may not be present (Option).
+master Irukkalaam {
+    any _val;
+    bool _has;
+    mersal init(any val, bool has) { naan._val = val; naan._has = has; }
+
+    mersal irukka() -> bool { thiruppi naan._has; }        // isSome
+    mersal kaaliyaa() -> bool { thiruppi !naan._has; }     // isNone
+    mersal mathippu() -> any { thiruppi naan._val; }       // unwrap (value)
+    mersal alladhu(any fallback) -> any {                   // orElse
+        ghilli (naan._has) { thiruppi naan._val; }
+        thiruppi fallback;
+    }
+}
+
+// MudivuBathil<T,E> — success or failure (Result).
+master MudivuBathil {
+    any _val;
+    any _kurai;
+    bool _vetri;
+    mersal init(any val, any kurai, bool vetri) {
+        naan._val = val; naan._kurai = kurai; naan._vetri = vetri;
+    }
+
+    mersal vetriya() -> bool { thiruppi naan._vetri; }      // isOk
+    mersal tholviya() -> bool { thiruppi !naan._vetri; }    // isErr
+    mersal mathippu() -> any { thiruppi naan._val; }        // unwrap value
+    mersal kurai() -> any { thiruppi naan._kurai; }         // the error
+    mersal alladhu(any fallback) -> any {                    // value or fallback
+        ghilli (naan._vetri) { thiruppi naan._val; }
+        thiruppi fallback;
+    }
+}
+
+// Factories
+master _IrukkalaamFactory {
+    mersal irukku(any val) -> any { thiruppi Irukkalaam(val, aama); }   // Some(val)
+    mersal kaali() -> any { thiruppi Irukkalaam(onnumilla, illa); }     // None
+    mersal vetri(any val) -> any { thiruppi MudivuBathil(val, onnumilla, aama); }   // Ok(val)
+    mersal tholvi(any err) -> any { thiruppi MudivuBathil(onnumilla, err, illa); }  // Err(err)
+}
+
+makkal irukkalaam = _IrukkalaamFactory();

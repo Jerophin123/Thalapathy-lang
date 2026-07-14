@@ -14,6 +14,8 @@
 #include "commands/InspectCommand.cpp"
 #include "commands/PackageCommand.cpp"
 #include "commands/NaduCommand.cpp"
+#include "commands/ThalapathifyCommand.cpp"
+#include "commands/NewWebCommand.cpp"
 #include <iostream>
 #include <map>
 #include <memory>
@@ -40,6 +42,8 @@ static void printTdkHelp() {
               << "  inspect <pkg> Display compiled artifact metadata\n"
               << "  package       Generate .tvkpkg distribution archive\n"
               << "  nadu <a.b.c>  Create a Java-style package (dirs + stub .tvk)\n"
+              << "  thalapathify <path>  Rewrite legacy English syntax to canonical THALAPATHY (-f writes)\n"
+              << "  new-web <name>  Scaffold a runnable THALAIVALAI web project\n"
               << "  help          Display this help text\n\n"
               << "Options:\n"
               << "  --json        Format command output as structured JSON\n"
@@ -90,6 +94,8 @@ int main(int argc, char* argv[]) {
     commands["inspect"] = std::make_unique<InspectCommand>();
     commands["package"] = std::make_unique<PackageCommand>();
     commands["nadu"] = std::make_unique<NaduCommand>();
+    commands["thalapathify"] = std::make_unique<ThalapathifyCommand>();
+    commands["new-web"] = std::make_unique<NewWebCommand>();
 
     auto it = commands.find(subcommand);
     if (it == commands.end()) {

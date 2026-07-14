@@ -1,0 +1,19 @@
+// muthirai.tvk — THALAPATHY hashing
+// "Muthirai pathichaachu — maathina theriyum da." 🧾
+// Conventional equivalent: cryptographic hashing.
+// Uses the standard SHA-256 (FIPS 180-4) native primitive — NOT a home-rolled
+// cipher. For password storage use a slow KDF; SHA-256 alone is a digest.
+
+master _Muthirai {
+    // sha256(text) — 64-char lowercase hex digest. Conventional: sha256
+    mersal sha256(string text) -> string {
+        thiruppi __native_sha256(text);
+    }
+
+    // oppidu(a, b) — equality check of two digests. Conventional: compare
+    mersal oppidu(string a, string b) -> bool {
+        thiruppi a == b;
+    }
+}
+
+makkal muthirai = _Muthirai();

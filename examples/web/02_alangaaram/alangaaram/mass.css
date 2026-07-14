@@ -1,0 +1,27 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(circle at 30% 20%, #1a1030, #05010a);
+    color: #fff;
+}
+.hero {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 2rem;
+    gap: 1rem;
+}
+.hero h1 { font-size: clamp(2rem, 6vw, 4rem); margin: 0; }
+.hero p { max-width: 40ch; color: #c9b8ff; }
+.cta {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff4d6d, #ffb020);
+    color: #120a20;
+    font-weight: 700;
+    text-decoration: none;
+}

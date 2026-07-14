@@ -1,0 +1,22 @@
+// vettaikaaran.tvk — THALAPATHY Regex module
+// "Vettaikaaran... pattern-a vetti pudichiduvaan." 🎯
+// Conventional equivalent: regex (ECMAScript syntax via std::regex)
+
+master _Vettaikaaran {
+    // pidichacha(pattern, text) — does pattern hit anywhere?  Conventional: search
+    mersal pidichacha(string pattern, string text) -> bool {
+        thiruppi __native_regex_match(text, pattern);
+    }
+
+    // thediPidi(pattern, text) — all matches as a list. Conventional: findAll
+    mersal thediPidi(string pattern, string text) -> any {
+        thiruppi __native_regex_find_all(text, pattern);
+    }
+
+    // maathidu(pattern, rep, text) — regex replace. Conventional: replace
+    mersal maathidu(string pattern, string rep, string text) -> string {
+        thiruppi __native_regex_replace(text, pattern, rep);
+    }
+}
+
+makkal vettaikaaran = _Vettaikaaran();

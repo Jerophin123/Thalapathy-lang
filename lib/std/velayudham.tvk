@@ -1,0 +1,43 @@
+// velayudham.tvk — THALAPATHY Filesystem module
+// "Velayudham... file-a kaappaathi, thevaiyaana bodhu eduthu tharuvaan." 🗡️
+// Conventional equivalent: filesystem (text files)
+
+master _Velayudham {
+    // padichu(path) — read whole file as text (null if missing). Conventional: readText
+    mersal padichu(string path) -> any {
+        thiruppi __native_read_file(path);
+    }
+
+    // ezhudhu(path, text) — write text, overwrite. Conventional: writeText
+    mersal ezhudhu(string path, string text) -> bool {
+        thiruppi __native_write_file(path, text);
+    }
+
+    // serthuEzhudhu(path, text) — append text. Conventional: appendText
+    mersal serthuEzhudhu(string path, string text) -> bool {
+        makkal old = __native_read_file(path);
+        ghilli (old == null) { old = ""; }
+        thiruppi __native_write_file(path, old + text);
+    }
+
+    // irukka(path) — does the file exist? Conventional: exists
+    mersal irukka(string path) -> bool {
+        thiruppi __native_file_exists(path);
+    }
+
+    // evlo(path) — size in characters (0 if missing). Conventional: size
+    mersal evlo(string path) -> int {
+        makkal data = __native_read_file(path);
+        ghilli (data == null) { thiruppi 0; }
+        thiruppi len(data);
+    }
+
+    // nagaledu(from, to) — copy file contents. Conventional: copy
+    mersal nagaledu(string from, string to) -> bool {
+        makkal data = __native_read_file(from);
+        ghilli (data == null) { thiruppi false; }
+        thiruppi __native_write_file(to, data);
+    }
+}
+
+makkal velayudham = _Velayudham();

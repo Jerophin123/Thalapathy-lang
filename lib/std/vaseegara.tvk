@@ -1,0 +1,70 @@
+// vaseegara.tvk — THALAPATHY Text / String module
+// "Vaseegara... vaarthai-ellaam dialogue maadhiri process pannu." 💬
+// Conventional equivalent: string / text utilities
+
+master _Vaseegara {
+    // perusaSollu / sirusaSollu — upper / lower
+    mersal perusaSollu(string s) -> string { thiruppi s.toUpper(); }
+    mersal sirusaSollu(string s) -> string { thiruppi s.toLower(); }
+
+    // mudhalezhuthu — capitalize first letter
+    mersal mudhalezhuthu(string s) -> string {
+        ghilli (len(s) == 0) { thiruppi s; }
+        makkal head = s.charAt(0);
+        thiruppi head.toUpper() + s.substring(1);
+    }
+
+    // trimPannu — strip surrounding whitespace
+    mersal trimPannu(string s) -> string { thiruppi s.trim(); }
+
+    // irukka / thodakkam / mudivu — contains / startsWith / endsWith
+    mersal irukka(string s, string needle) -> bool { thiruppi s.contains(needle); }
+    mersal thodakkam(string s, string p) -> bool { thiruppi s.startsWith(p); }
+    mersal mudiyudha(string s, string p) -> bool { thiruppi s.endsWith(p); }  // endsWith (mudivu is now a keyword)
+
+    // thirumba — repeat n times
+    mersal thirumba(string s, int n) -> string { thiruppi s.repeat(n); }
+
+    // thiruppu — reverse the string
+    mersal thiruppu(string s) -> string {
+        makkal r = "";
+        bigil (makkal i = len(s) - 1; i >= 0; i = i - 1) {
+            r = r + s.charAt(i);
+        }
+        thiruppi r;
+    }
+
+    // pirichu — split by delimiter -> list. Conventional: split
+    mersal pirichu(string s, string delim) -> any {
+        thiruppi __native_string_split(s, delim);
+    }
+
+    // serthu — join a list of parts with a separator. Conventional: join
+    mersal serthu(any parts, string sep) -> string {
+        thiruppi parts.join(sep);
+    }
+
+    // maathidu — replace all occurrences. Conventional: replace
+    mersal maathidu(string s, string find, string rep) -> string {
+        thiruppi __native_string_replace(s, find, rep);
+    }
+
+    // ennu — count occurrences of needle. Conventional: count
+    mersal ennu(string s, string needle) -> int {
+        ghilli (len(needle) == 0) { thiruppi 0; }
+        makkal parts = __native_string_split(s, needle);
+        thiruppi len(parts) - 1;
+    }
+
+    // numberaah — is the whole string numeric?  Conventional: isNumeric
+    mersal numberaah(string s) -> bool {
+        ghilli (len(s) == 0) { thiruppi false; }
+        makkal digits = "0123456789";
+        bigil (makkal i = 0; i < len(s); i = i + 1) {
+            ghilli (!digits.contains(s.charAt(i))) { thiruppi false; }
+        }
+        thiruppi true;
+    }
+}
+
+makkal vaseegara = _Vaseegara();

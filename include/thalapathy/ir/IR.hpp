@@ -37,7 +37,8 @@ enum class OpCode : uint8_t {
     INDEX_SET,
     GET_FIELD,
     SET_FIELD,
-    THROW
+    THROW,
+    AWAIT
 };
 
 using ConstantVal = std::variant<long long, double, std::string>;

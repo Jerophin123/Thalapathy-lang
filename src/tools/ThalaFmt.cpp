@@ -2,11 +2,47 @@
 #include "thalapathy/format/FormatterConfig.hpp"
 #include "thalapathy/installation/TdkHome.hpp"
 #include "thalapathy/version/Version.hpp"
+#include "thalapathy/lexer/Lexer.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
 #include <vector>
+#include <algorithm>
+
+// Token-aware legacy->canonical rewrite (shared behaviour with `tdk thalapathify`).
+static const char* canonicalSpelling(thalapathy::TokenType t) {
+    using T = thalapathy::TokenType;
+    switch (t) {
+        case T::TRUE_VAL:  return "aama";
+        case T::FALSE_VAL: return "illa";
+        case T::NULL_VAL:  return "onnumilla";
+        case T::THIS:      return "naan";
+        case T::SUPER:     return "munnadi";
+        case T::BREAK:     return "interval";
+        case T::CONTINUE:  return "aduthu";
+        case T::STATIC:    return "podhu";
+        case T::AS:        return "maathiko";
+        default:           return nullptr;
+    }
+}
+
+static std::string thalapathifySource(const std::string& path, const std::string& src, int& changes) {
+    thalapathy::Lexer lexer(path, src);
+    auto tokens = lexer.tokenize();
+    struct Rep { size_t off; size_t len; std::string to; };
+    std::vector<Rep> reps;
+    for (const auto& tok : tokens) {
+        const char* canon = canonicalSpelling(tok.type);
+        if (!canon || tok.value == canon) continue;
+        reps.push_back({tok.span.byte_offset, tok.value.size(), canon});
+    }
+    changes = static_cast<int>(reps.size());
+    std::string out = src;
+    std::sort(reps.begin(), reps.end(), [](const Rep& a, const Rep& b){ return a.off > b.off; });
+    for (const auto& r : reps) out.replace(r.off, r.len, r.to);
+    return out;
+}
 
 namespace fs = std::filesystem;
 
@@ -28,6 +64,7 @@ static bool writeWholeFile(const std::string& path, const std::string& content) 
 int main(int argc, char* argv[]) {
     bool writeMode = false;
     bool checkMode = false;
+    bool thalapathifyMode = false;
     std::vector<std::string> paths;
 
     for (int i = 1; i < argc; ++i) {
@@ -39,6 +76,8 @@ int main(int argc, char* argv[]) {
             writeMode = true;
         } else if (arg == "--check") {
             checkMode = true;
+        } else if (arg == "--thalapathify") {
+            thalapathifyMode = true;
         } else if (arg.rfind("-", 0) == 0) {
             std::cerr << "error: unknown option '" << arg << "'\n";
             return 1;
@@ -72,7 +111,7 @@ int main(int argc, char* argv[]) {
     thalapathy::Formatter formatter(fmtConfig);
     bool checkFailed = false;
 
-    // Collect all files
+    // Collect all files (also used by --thalapathify below)
     std::vector<std::string> filesToFormat;
     for (const auto& pathStr : paths) {
         if (!fs::exists(pathStr)) {
@@ -88,6 +127,28 @@ int main(int argc, char* argv[]) {
         } else {
             filesToFormat.push_back(pathStr);
         }
+    }
+
+    if (thalapathifyMode) {
+        for (const auto& filePath : filesToFormat) {
+            std::string original = readWholeFile(filePath);
+            int changes = 0;
+            std::string rewritten = thalapathifySource(filePath, original, changes);
+            if (changes == 0) {
+                std::cout << "  " << filePath << ": already canonical\n";
+                continue;
+            }
+            if (writeMode) {
+                writeWholeFile(filePath, rewritten);
+                std::cout << "thalapathified " << filePath << " (" << changes << " change(s))\n";
+            } else if (checkMode) {
+                std::cout << "Has legacy syntax: " << filePath << " (" << changes << " change(s))\n";
+                checkFailed = true;
+            } else {
+                std::cout << rewritten;
+            }
+        }
+        return (checkMode && checkFailed) ? 1 : 0;
     }
 
     for (const auto& filePath : filesToFormat) {

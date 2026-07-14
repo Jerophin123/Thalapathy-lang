@@ -1,0 +1,41 @@
+// deva.tvk — THALAPATHY Random module
+// "Deva... vidhi enna solludho, adhu dhaan nadakkum." 🎲
+// Conventional equivalent: random  (NOT cryptographically secure)
+
+master _Deva {
+    // adhirshtam() — random float in [0, 1). Conventional: random
+    mersal adhirshtam() -> float {
+        thiruppi __native_random();
+    }
+
+    // number(lo, hi) — random int in [lo, hi]. Conventional: randomInt
+    mersal number(int lo, int hi) -> int {
+        thiruppi __native_random_int(lo, hi);
+    }
+
+    // vidhi(n) — seed the generator. Conventional: seed
+    mersal vidhi(int n) {
+        __native_random_seed(n);
+    }
+
+    // eduthuko(list) — random element. Conventional: choice
+    mersal eduthuko(any list) -> any {
+        makkal idx = __native_random_int(0, len(list) - 1);
+        thiruppi list[idx];
+    }
+
+    // kalappu(list) — return a shuffled copy (Fisher-Yates). Conventional: shuffle
+    mersal kalappu(any list) -> any {
+        makkal out = [];
+        vaathi item in list { out.push(item); }
+        bigil (makkal i = len(out) - 1; i > 0; i = i - 1) {
+            makkal j = __native_random_int(0, i);
+            makkal tmp = out[i];
+            out[i] = out[j];
+            out[j] = tmp;
+        }
+        thiruppi out;
+    }
+}
+
+makkal deva = _Deva();

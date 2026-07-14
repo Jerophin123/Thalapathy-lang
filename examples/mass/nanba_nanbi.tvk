@@ -1,0 +1,40 @@
+// nanba_nanbi.tvk — nanba (single binding) + nanbi (pattern binding) 🔥
+// nanba  = immutable single binding
+// nanbi  = immutable destructuring / pattern binding
+
+mersal kanakku(int a, int b) -> any {
+    thiruppi [a + b, a - b, a * b];   // multi-value result
+}
+
+thalapathy aarambam {
+    // nanba — single immutable binding
+    nanba hero = "Vijay";
+    sollu("Nanba: " + hero);
+
+    // nanbi — array/tuple destructuring (mixed types allowed)
+    nanbi [peru, padam, varudam] = ["Vijay", "Ghilli", 2004];
+    sollu(peru + " - " + padam + " - " + string(varudam));
+
+    // nanbi — clean multi-value workflow
+    nanbi [kootal, kazhithal, perukkal] = kanakku(10, 5);
+    sollu("kootal=" + string(kootal) + " kazhithal=" + string(kazhithal) + " perukkal=" + string(perukkal));
+
+    // nanbi — ignore (_) and rest (...)
+    nanbi [mudhal, _, ...meedhi] = [1, 2, 3, 4, 5];
+    sollu("mudhal=" + string(mudhal) + " meedhi=" + meedhi.join(", "));
+
+    // nanbi — object/map destructuring with alias
+    nanba info = { "peru": "Vijay", "title": "Thalapathy" };
+    nanbi { peru: peyar, title } = info;
+    sollu(peyar + " / " + title);
+
+    // nanbi — loop pattern binding
+    nanba padangal = [
+        ["Ghilli", 2004],
+        ["Thuppakki", 2012],
+        ["Leo", 2023]
+    ];
+    vaathi nanbi [padam2, varudam2] ulla padangal {
+        sollu(padam2 + " (" + string(varudam2) + ")");
+    }
+}

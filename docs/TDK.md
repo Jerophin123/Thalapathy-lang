@@ -2,6 +2,9 @@
 
 **TDK** is the official development kit for the THALAPATHY programming language.
 
+> Fan tribute to Joseph Vijay Chandrasekhar (Thalapathy Vijay). See [TRIBUTE.md](TRIBUTE.md).
+> Full doc index: [README.md](README.md).
+
 ## Overview
 
 TDK provides a complete toolchain for developing, compiling, inspecting, and formatting THALAPATHY source code.
@@ -17,8 +20,8 @@ TDK provides a complete toolchain for developing, compiling, inspecting, and for
 
 ## Versions
 
-- **Language Version**: 0.3.0
-- **TDK Version**: 0.3.0
+- **Language Version**: 1.0.0
+- **TDK Version**: 1.0.0
 - **VEAF Format Version**: 3
 - **Source Extension**: `.tvk`
 - **Artifact Extension**: `.vijay`

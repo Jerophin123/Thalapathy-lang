@@ -1,0 +1,31 @@
+// kootu.tvk — THALAPATHY Functional module
+// "Function-a function-oda kootu — map, filter, reduce, pipe." 🔗
+// Conventional equivalent: functional / itertools
+
+master _Kootu {
+    // maatru(list, fn) — map. Conventional: map
+    mersal maatru(any list, any fn) -> any {
+        thiruppi list.map(fn);
+    }
+
+    // vadikattu(list, fn) — filter. Conventional: filter
+    mersal vadikattu(any list, any fn) -> any {
+        thiruppi list.filter(fn);
+    }
+
+    // suruku(list, fn, init) — reduce/fold. Conventional: reduce
+    mersal suruku(any list, any fn, any init) -> any {
+        thiruppi list.reduce(fn, init);
+    }
+
+    // thodar(x, fns) — pipe x through a list of functions left-to-right.
+    mersal thodar(any x, any fns) -> any {
+        makkal val = x;
+        vaathi f in fns {
+            val = f(val);
+        }
+        thiruppi val;
+    }
+}
+
+makkal kootu = _Kootu();

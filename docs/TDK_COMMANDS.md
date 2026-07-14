@@ -45,8 +45,35 @@ tdk run             Run project entry directly
 tdk clean           Delete project build output safely
 tdk inspect <pkg>   Display compiled artifact metadata
 tdk package         Generate .tvkpkg distribution archive
+tdk thalapathify <path> [-f]  Rewrite legacy English keywords to canonical THALAPATHY
+tdk new-web <name>  Scaffold a runnable THALAIVALAI web project
 tdk help            Display help text
 ```
+
+### `tdk thalapathify`
+
+Token-aware migration from legacy English spellings to canonical THALAPATHY syntax. Built on the real Lexer — strings, comments, and identifier substrings are never touched.
+
+```
+tdk thalapathify src/              Preview changes (stdout)
+tdk thalapathify src/app.tvk -f    Write canonical syntax in place
+```
+
+Rewrites: `true→aama`, `false→illa`, `null→onnumilla`, `this→naan`, `super→munnadi`, `break→interval`, `continue→aduthu`, `static→podhu`, `as→maathiko`.
+
+See also [THALAPATHY_IDENTITY_AUDIT.md](THALAPATHY_IDENTITY_AUDIT.md).
+
+### `tdk new-web`
+
+Creates a THALAIVALAI project with `src/main.tvk`, `paarvai/` views, `alangaaram/` CSS, `nadanam/` JS, and `thalapathy.toml`.
+
+```
+tdk new-web my-site
+cd my-site
+tdk run    # serves on port 8080 by default
+```
+
+See [THALAIVALAI_WEB.md](THALAIVALAI_WEB.md).
 
 ### Options
 - `--json` — Format output as structured JSON

@@ -9,6 +9,7 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"thalapathy", TokenType::THALAPATHY},
     {"aarambam", TokenType::AARAMBAM},
     {"nanba", TokenType::NANBA},
+    {"nanbi", TokenType::NANBI},
     {"makkal", TokenType::MAKKAL},
     {"uruthi", TokenType::URUTHI},
     {"ghilli", TokenType::GHILLI},
@@ -36,6 +37,8 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"nadu", TokenType::NADU},
     {"vagai", TokenType::VAGAI},
     {"kadaisi", TokenType::KADAISI},
+    {"varum", TokenType::VARUM},
+    {"kaathiru", TokenType::KAATHIRU},
 
     // Conventional
     {"int", TokenType::INT_TYPE},
@@ -57,7 +60,26 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"static", TokenType::STATIC},
     {"as", TokenType::AS},
     {"aaguma", TokenType::AAGUMA},
-    {"operator", TokenType::OPERATOR}
+    {"operator", TokenType::OPERATOR},
+
+    // -------- Canonical THALAPATHY syntax (alias existing grammar tokens) --------
+    // These make the THALAPATHY spelling first-class; the English spellings above
+    // remain as legacy compatibility aliases. Whole-word lookup keeps look-alike
+    // identifiers safe: `illana`/`illavarasan`/`naanga`/`ullam` stay identifiers.
+    {"aama", TokenType::TRUE_VAL},        // aama      == true
+    {"illa", TokenType::FALSE_VAL},       // illa      == false
+    {"onnumilla", TokenType::NULL_VAL},   // onnumilla == null
+    {"naan", TokenType::THIS},            // naan      == this
+    {"interval", TokenType::BREAK},       // interval  == break
+    {"aduthu", TokenType::CONTINUE},      // aduthu    == continue
+    {"podhu", TokenType::STATIC},         // podhu     == static
+    {"maathiko", TokenType::AS},          // maathiko  == as (cast)
+    {"munnadi", TokenType::SUPER},        // munnadi   == super (kootam.munnadi renamed to .mun)
+    {"comeback", TokenType::COMEBACK},    // comeback  == override (method modifier)
+    {"yaaru", TokenType::YAARU},          // pattern match:  yaaru <expr> { ivan <p> {..} yaarumilla {..} }
+    {"ivan", TokenType::IVAN},            // match arm
+    {"yaarumilla", TokenType::YAARUMILLA}, // default arm
+    {"mudivu", TokenType::URUTHI}          // mudivu == final method / const (satham FATAL renamed to .saavu)
 };
 
 Lexer::Lexer(std::string filename_, std::string source_)

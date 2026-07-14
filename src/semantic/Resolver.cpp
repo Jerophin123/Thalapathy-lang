@@ -49,7 +49,7 @@ Resolver::Resolver(std::string filename_, std::string sourceCode_)
             "__native_math_sqrt", "__native_math_sin", "__native_math_cos",
             "__native_math_ceil", "__native_math_floor",
             "__native_string_split", "__native_string_replace",
-            "__native_random", "__native_random_int", "__native_random_seed",
+            "__native_random", "__native_random_int", "__native_random_seed", "__native_sha256",
             "__native_os_name", "__native_os_cwd", "__native_os_exit",
             "__native_time_millis", "__native_sleep_ms",
             "__native_json_stringify", "__native_json_parse",
@@ -59,7 +59,10 @@ Resolver::Resolver(std::string filename_, std::string sourceCode_)
             "__native_db_find", "__native_db_get", "__native_db_update",
             "__native_db_remove", "__native_db_count",
             "__native_regex_match", "__native_regex_find_all", "__native_regex_replace",
-            "__native_date_format", "__native_date_now_seconds", "__native_log"}) {
+            "__native_date_format", "__native_date_now_seconds", "__native_log",
+            "__native_ws_upgrade", "__native_ws_send", "__native_ws_recv",
+            "__native_sse_upgrade", "__native_sse_send",
+            "__native_socket_is_closed", "__native_socket_close"}) {
         Symbol convSym;
         convSym.name = name;
         convSym.type = Type{TypeKind::FUNCTION, ""};
@@ -204,6 +207,34 @@ bool Resolver::resolve(const std::vector<std::unique_ptr<ASTNode>>& nodes, bool 
         }
     }
 
+    // `comeback` (override) validation: an overriding method must have a
+    // matching method somewhere up the parent chain.
+    for (const auto& [name, info] : classTable) {
+        for (const auto& [methodName, sigs] : info.methods) {
+            bool anyOverride = false;
+            for (const auto& s : sigs) if (s.isOverride) anyOverride = true;
+            if (!anyOverride) continue;
+            bool foundInParent = false;
+            std::string p = info.parentName;
+            std::unordered_map<std::string, bool> seen;
+            while (!p.empty() && !seen[p]) {
+                seen[p] = true;
+                auto it = classTable.find(p);
+                if (it == classTable.end()) break;
+                if (it->second.methods.find(methodName) != it->second.methods.end()) {
+                    foundInParent = true;
+                    break;
+                }
+                p = it->second.parentName;
+            }
+            if (!foundInParent) {
+                reportError("THALA-OVERRIDE-001", "invalid comeback (override)", SourceSpan{filename},
+                            "method '" + methodName + "' in '" + name + "' is marked 'comeback' but no parent class declares it",
+                            "remove 'comeback', or make sure a parent class has this method");
+            }
+        }
+    }
+
     // Phase 2: Walk AST
     for (const auto& node : nodes) {
         node->accept(this);
@@ -298,6 +329,39 @@ void Resolver::visit(VarDecl* node) {
     sym.span = node->span;
 
     declare(sym);
+}
+
+void Resolver::visit(NanbiDecl* node) {
+    // Resolve the source expression once, then declare every bound name.
+    if (node->initializer) {
+        node->initializer->accept(this);
+    }
+    for (const auto& b : node->bindings) {
+        if (b.kind == NanbiBinding::Kind::Ignore) continue; // `_` binds nothing
+        if (isDeclaredInCurrentScope(b.name)) {
+            reportError("THALA-NANBI-004", "duplicate pattern binding", node->span,
+                        "binding '" + b.name + "' appears more than once in this nanbi pattern",
+                        "use a different name for each binding");
+            continue;
+        }
+        Symbol sym;
+        sym.name = b.name;
+        sym.type = Type{TypeKind::ANY, ""};
+        sym.kind = SymbolKind::VARIABLE;
+        sym.isMutable = false;   // nanbi bindings are immutable
+        sym.isConstant = false;
+        sym.span = node->span;
+        declare(sym);
+    }
+}
+
+void Resolver::visit(MatchStmt* node) {
+    node->subject->accept(this);
+    for (const auto& arm : node->arms) {
+        if (arm.pattern) arm.pattern->accept(this);
+        if (arm.body) arm.body->accept(this);
+    }
+    if (node->defaultBody) node->defaultBody->accept(this);
 }
 
 void Resolver::visit(FuncDecl* node) {
@@ -464,12 +528,25 @@ void Resolver::visit(ForEachStmt* node) {
     node->iterable->accept(this);
     loopDepth++;
     beginScope();
-    Symbol loopVar;
-    loopVar.name = node->varName;
-    loopVar.type = Type{TypeKind::ANY, ""};
-    loopVar.kind = SymbolKind::VARIABLE;
-    loopVar.isMutable = false;
-    declare(loopVar);
+    if (node->hasPattern) {
+        // `vaathi nanbi [a, b] ulla ...` — declare each pattern binding.
+        for (const auto& b : node->patternBindings) {
+            if (b.kind == NanbiBinding::Kind::Ignore) continue;
+            Symbol sym;
+            sym.name = b.name;
+            sym.type = Type{TypeKind::ANY, ""};
+            sym.kind = SymbolKind::VARIABLE;
+            sym.isMutable = false;
+            declare(sym);
+        }
+    } else {
+        Symbol loopVar;
+        loopVar.name = node->varName;
+        loopVar.type = Type{TypeKind::ANY, ""};
+        loopVar.kind = SymbolKind::VARIABLE;
+        loopVar.isMutable = false;
+        declare(loopVar);
+    }
     node->body->accept(this);
     endScope();
     loopDepth--;
@@ -668,6 +745,8 @@ void Resolver::visit(UnaryExpr* node) {
                         "operator is only valid for numeric types",
                         "provide a numeric operand");
         }
+    } else if (node->op == TokenType::KAATHIRU) {
+        currentExprType = Type{TypeKind::ANY, ""};
     }
 }
 
@@ -776,13 +855,10 @@ void Resolver::visit(ArrayExpr* node) {
         for (size_t i = 1; i < node->elements.size(); ++i) {
             node->elements[i]->accept(this);
             if (!elemType.isCompatible(currentExprType)) {
-                // Warning/error for heterogeneous arrays? The spec says "homogeneous typed arrays in Phase 1"
-                // Let's print warning or error if strict. Let's make it a warning or type mismatch error.
-                // To keep it simple, let's make it TypeKind::ANY if heterogeneous, or report type mismatch.
-                // Let's report type mismatch error to satisfy "homogenous typed arrays".
-                reportError("THALA-TYPE-001", "type mismatch in array elements", node->elements[i]->span,
-                            "expected array element type '" + typeKindToString(elemType.kind) + "', found '" + typeKindToString(currentExprType.kind) + "'",
-                            "ensure all array elements are of the same type");
+                // Heterogeneous literal => treat as a tuple of `any`. This is
+                // intentional: it powers `nanbi [...]` multi-value / tuple
+                // destructuring (e.g. ["Vijay", "Ghilli", 2004]).
+                elemType = Type{TypeKind::ANY, ""};
             }
         }
     }

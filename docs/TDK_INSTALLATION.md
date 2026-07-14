@@ -1,5 +1,7 @@
 # TDK Installation Guide
 
+**TDK 1.0.0** · Full documentation: [README.md](README.md) · Verify with `tdk doctor` after install.
+
 ## Prerequisites
 
 - Windows 10+ or Linux
@@ -18,7 +20,7 @@ cmake --build build --config Release
 ## Installing
 
 ```bash
-cmake --install build --prefix /path/to/TDK-0.3.0
+cmake --install build --prefix /path/to/TDK-1.0.0
 ```
 
 ## Environment Setup
@@ -27,11 +29,11 @@ Set `TDK_HOME` to the installation root:
 
 ```bash
 # Windows PowerShell
-$env:TDK_HOME = "D:\TDK-0.3.0"
+$env:TDK_HOME = "D:\TDK-1.0.0"
 $env:PATH = "$env:TDK_HOME\bin;$env:PATH"
 
 # Linux/macOS
-export TDK_HOME=/opt/TDK-0.3.0
+export TDK_HOME=/opt/TDK-1.0.0
 export PATH=$TDK_HOME/bin:$PATH
 ```
 
@@ -48,7 +50,7 @@ TDK Doctor
 
 [PASS] TDK_HOME directory resolved
 [PASS] All TDK executables present (4/4 found)
-[PASS] Standard library modules present (5/5 found)
+[PASS] Standard library modules present
 [PASS] TDK_HOME/bin is in PATH
 [PASS] VERSION file present
 [PASS] RELEASE.json valid
@@ -59,7 +61,7 @@ TDK Doctor
 ## Distribution Layout
 
 ```
-TDK-0.3.0/
+TDK-1.0.0/
 ├── bin/                  Executable tools
 ├── conf/                 Configuration files
 ├── lib/std/              Standard library modules

@@ -1,0 +1,37 @@
+// arasu.tvk — THALAPATHY System / Process / Environment module
+// "Arasu-thaan ellaathaiyum control panradhu — OS, env, process." 🏛️
+// Conventional equivalent: os / sys / process
+
+master _Arasu {
+    // naadu() — platform name (windows/macos/linux). Conventional: platform
+    mersal naadu() -> string {
+        thiruppi __native_os_name();
+    }
+
+    // ippoIdam() — current working directory. Conventional: cwd
+    mersal ippoIdam() -> string {
+        thiruppi __native_os_cwd();
+    }
+
+    // kaes(name) — read an environment variable. Conventional: getenv
+    mersal kaes(string name) -> any {
+        thiruppi __native_get_env(name);
+    }
+
+    // vai(name, val) — set an environment variable. Conventional: setenv
+    mersal vai(string name, string val) -> bool {
+        thiruppi __native_set_env(name, val);
+    }
+
+    // aanai(cmd) — run a shell command, capture output. Conventional: exec
+    mersal aanai(string cmd) -> any {
+        thiruppi __native_sys_command(cmd);
+    }
+
+    // mudichidu(code) — exit the process. Conventional: exit
+    mersal mudichidu(int code) {
+        __native_os_exit(code);
+    }
+}
+
+makkal arasu = _Arasu();

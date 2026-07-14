@@ -1,0 +1,100 @@
+// full_language.tvk — THALAPATHY MASS ENTRY 🔥
+// "Idhu Java illa. Python illa. C++ illa. Idhu THALAPATHY da."
+// One file that exercises the whole Vijay-native standard library.
+
+sarkar sivakasi;      // math
+sarkar vaseegara;     // text
+sarkar kootam;        // collections
+sarkar udhaya;        // path
+sarkar jilla;         // json
+sarkar vettaikaaran;  // regex
+sarkar deva;          // random
+sarkar ozhungu;       // algorithms
+sarkar kootu;         // functional
+
+// --- OOP: master + varisu (inheritance) ---
+master Nadigan {
+    string peru;
+    mersal init(string peru) { this.peru = peru; }
+    mersal introduce() -> string { thiruppi "Naan " + this.peru; }
+}
+
+master Thalapathy varisu Nadigan {
+    mersal init(string peru) { this.peru = peru; }
+    mersal punch() -> string {
+        // introduce() is inherited from Nadigan
+        thiruppi this.introduce() + " — once I commit, I never look back! 🔥";
+    }
+}
+
+thalapathy aarambam {
+    sollu("========================================");
+    sollu("   THALAPATHY STDLIB — MASS ENTRY da 🔥");
+    sollu("========================================");
+
+    // --- sivakasi (math) ---
+    sollu("[sivakasi] mulai(169) =", sivakasi.mulai(169.0));
+    sollu("[sivakasi] power(2, 10) =", sivakasi.power(2.0, 10));
+    sollu("[sivakasi] fact(6) =", sivakasi.fact(6));
+    sollu("[sivakasi] 17 prime-ah? =", sivakasi.primeah(17));
+    sollu("[sivakasi] pothu(48,60) gcd =", sivakasi.pothu(48, 60));
+
+    // --- vaseegara (text) ---
+    makkal dialogue = "  vaathi coming  ";
+    sollu("[vaseegara] trim + perusa =", vaseegara.perusaSollu(vaseegara.trimPannu(dialogue)));
+    sollu("[vaseegara] thiruppu('MASS') =", vaseegara.thiruppu("MASS"));
+    sollu("[vaseegara] ennu('a' in 'thalapathy') =", vaseegara.ennu("thalapathy", "a"));
+
+    // --- kootam (collections) ---
+    makkal adukku = kootam.adukku();
+    adukku.serthu("Ghilli");
+    adukku.serthu("Pokkiri");
+    adukku.serthu("Master");
+    sollu("[kootam] adukku top (LIFO) =", adukku.eduthudu());
+    sollu("[kootam] adukku size =", adukku.evlo());
+
+    makkal varisai = kootam.varisai();
+    varisai.serthu("Theri");
+    varisai.serthu("Mersal");
+    sollu("[kootam] varisai front (FIFO) =", varisai.eduthudu());
+
+    // --- udhaya (path) ---
+    makkal p = "d/thalapathy/examples/mass/full_language.tvk";
+    sollu("[udhaya] peru =", udhaya.peru(p));
+    sollu("[udhaya] vagaipeyar =", udhaya.vagaipeyar(p));
+    sollu("[udhaya] adippeyar =", udhaya.adippeyar(p));
+
+    // --- jilla (json) ---
+    makkal parsed = jilla.purinjiko("{\"hero\":\"vijay\",\"count\":68}");
+    sollu("[jilla] parsed hero =", parsed.get("hero"));
+    sollu("[jilla] re-stringify =", jilla.solluData(parsed));
+
+    // --- vettaikaaran (regex) ---
+    makkal text = "TVK-2024 GOAT-2024 LEO-2023";
+    sollu("[vettaikaaran] years =", vettaikaaran.thediPidi("[0-9]+", text).join(", "));
+    sollu("[vettaikaaran] masked =", vettaikaaran.maathidu("[0-9]+", "####", text));
+
+    // --- deva (random) ---
+    deva.vidhi(68);
+    sollu("[deva] number(1,100) =", deva.number(1, 100));
+    sollu("[deva] eduthuko =", deva.eduthuko(["Ghilli", "Kaththi", "Bigil", "Leo"]));
+
+    // --- lambda + functional (kootu) + algorithms (ozhungu) ---
+    makkal nums = [42, 7, 23, 4, 16, 8, 15];
+    makkal doubled = kootu.maatru(nums, kutty (n) { thiruppi n * 2; });
+    sollu("[kootu] doubled =", doubled.join(", "));
+    makkal evens = kootu.vadikattu(nums, kutty (n) { thiruppi n % 2 == 0; });
+    sollu("[kootu] evens =", evens.join(", "));
+    makkal total = kootu.suruku(nums, kutty (a, n) { thiruppi a + n; }, 0);
+    sollu("[kootu] total =", total);
+    sollu("[ozhungu] sorted =", ozhungu.ozhunguPannu(nums).join(", "));
+    sollu("[ozhungu] search 16 @ index =", ozhungu.paathiThedal(ozhungu.ozhunguPannu(nums), 16));
+
+    // --- OOP + inheritance ---
+    makkal hero = Thalapathy("Vijay");
+    sollu("[oop]", hero.punch());
+
+    sollu("========================================");
+    sollu("   Vaa Thalaivaa. Library mass entry! 🔥");
+    sollu("========================================");
+}

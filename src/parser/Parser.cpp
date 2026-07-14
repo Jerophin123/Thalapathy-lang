@@ -175,9 +175,16 @@ std::unique_ptr<ASTNode> Parser::declaration() {
         return classDeclaration(true, false);
     }
 
-    // function: mersal name
-    if (match(TokenType::MERSAL)) {
-        return functionDeclaration();
+    // function: mersal name, potentially async (varum mersal)
+    bool isAsyncFunc = false;
+    if (match(TokenType::VARUM)) {
+        isAsyncFunc = true;
+        consume(TokenType::MERSAL, "expected 'mersal' after 'varum'");
+    }
+    if (match(TokenType::MERSAL) || isAsyncFunc) {
+        auto decl = functionDeclaration();
+        decl->isAsync = isAsyncFunc;
+        return decl;
     }
 
     // variables: nanba, makkal, uruthi
@@ -189,6 +196,11 @@ std::unique_ptr<ASTNode> Parser::declaration() {
     if (match(TokenType::MAKKAL)) {
         auto decl = variableDeclaration(true, false); // mutable
         consume(TokenType::SEMICOLON, "expected ';' after variable declaration");
+        return decl;
+    }
+    if (match(TokenType::NANBI)) {
+        auto decl = nanbiDeclaration();
+        consume(TokenType::SEMICOLON, "expected ';' after nanbi declaration");
         return decl;
     }
     if (match(TokenType::URUTHI)) {
@@ -326,11 +338,12 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
     consume(TokenType::LEFT_BRACE, "expected '{' before class body");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        // Parse modifiers: beast, leo, static, uruthi, waiting
         AccessModifier access = AccessModifier::PUBLIC;
         bool isStatic = false;
         bool isFinal = false;
         bool isAbstract = false;
+        bool isOverride = false;
+        bool isAsync = false;
 
         while (true) {
             if (match(TokenType::BEAST)) {
@@ -343,6 +356,10 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
                 isFinal = true;
             } else if (match(TokenType::WAITING)) {
                 isAbstract = true;
+            } else if (match(TokenType::COMEBACK)) {
+                isOverride = true;   // `comeback` == override
+            } else if (match(TokenType::VARUM)) {
+                isAsync = true;
             } else {
                 break;
             }
@@ -517,6 +534,7 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
                     funcNode->params = params;
                     funcNode->returnTypeStr = retType;
                     funcNode->body = std::move(body);
+                    funcNode->isAsync = isAsync;
 
                     auto methodDecl = std::make_unique<MethodDecl>();
                     methodDecl->span = mersalToken.span;
@@ -524,10 +542,16 @@ std::unique_ptr<ClassDecl> Parser::classDeclaration(bool isAbstractClass, bool i
                     methodDecl->isStatic = isStatic;
                     methodDecl->isAbstract = isAbstract;
                     methodDecl->isFinal = isFinal;
+                    methodDecl->isOverride = isOverride;
                     methodDecl->funcDecl = std::move(funcNode);
                     decl->methods.push_back(std::move(methodDecl));
                 }
             }
+        }
+        // Constructor via the canonical `aarambam(...)` keyword (no `mersal`).
+        else if (check(TokenType::AARAMBAM)) {
+            Token ctorTok = advance();
+            decl->constructors.push_back(parseConstructorRest(ctorTok.span));
         }
         // Is it a field? (e.g. string name;)
         else if (check(TokenType::INT_TYPE) || check(TokenType::FLOAT_TYPE) ||
@@ -680,6 +704,9 @@ std::unique_ptr<ASTNode> Parser::statement() {
     if (match(TokenType::THALAIVAA)) {
         return switchStatement();
     }
+    if (match(TokenType::YAARU)) {
+        return matchStatement();
+    }
     if (match(TokenType::THIRUPPI)) {
         return returnStatement();
     }
@@ -786,13 +813,164 @@ std::unique_ptr<ForStmt> Parser::forStatement() {
 // `vaathi x in <expr>`:
 //   - if <expr> is `range(a, b)`  -> classic counted RangeLoopStmt
 //   - otherwise                   -> ForEachStmt over an array/string/map
+void Parser::parseNanbiPattern(bool& isObjectPattern, std::vector<NanbiBinding>& out) {
+    if (match(TokenType::LEFT_BRACKET)) {
+        isObjectPattern = false;
+        if (!check(TokenType::RIGHT_BRACKET)) {
+            do {
+                NanbiBinding b;
+                if (check(TokenType::DOT)) {
+                    consume(TokenType::DOT, "expected '.' in rest binding");
+                    consume(TokenType::DOT, "expected '..' in rest binding");
+                    consume(TokenType::DOT, "expected '...' in rest binding");
+                    Token n = consume(TokenType::IDENTIFIER, "expected identifier after '...'");
+                    b.kind = NanbiBinding::Kind::Rest;
+                    b.name = n.value;
+                } else {
+                    Token n = consume(TokenType::IDENTIFIER, "expected binding name in pattern");
+                    if (n.value == "_") { b.kind = NanbiBinding::Kind::Ignore; }
+                    else { b.kind = NanbiBinding::Kind::Name; b.name = n.value; }
+                }
+                out.push_back(b);
+            } while (match(TokenType::COMMA));
+        }
+        consume(TokenType::RIGHT_BRACKET, "expected ']' to close nanbi pattern");
+    } else if (match(TokenType::LEFT_BRACE)) {
+        isObjectPattern = true;
+        if (!check(TokenType::RIGHT_BRACE)) {
+            do {
+                NanbiBinding b;
+                b.kind = NanbiBinding::Kind::Name;
+                Token key = consume(TokenType::IDENTIFIER, "expected key name in object pattern");
+                b.key = key.value;
+                b.name = key.value;
+                if (match(TokenType::COLON)) {
+                    Token alias = consume(TokenType::IDENTIFIER, "expected alias after ':'");
+                    b.name = alias.value;
+                }
+                out.push_back(b);
+            } while (match(TokenType::COMMA));
+        }
+        consume(TokenType::RIGHT_BRACE, "expected '}' to close nanbi pattern");
+    } else {
+        addError(peek(), "expected '[' or '{' in nanbi pattern");
+    }
+}
+
+std::unique_ptr<NanbiDecl> Parser::nanbiDeclaration() {
+    auto decl = std::make_unique<NanbiDecl>();
+    decl->span = previous().span; // the 'nanbi' token
+    parseNanbiPattern(decl->isObjectPattern, decl->bindings);
+    consume(TokenType::EQUAL, "expected '=' in nanbi declaration");
+    decl->initializer = expression();
+    return decl;
+}
+
+// Parse the part after a constructor's leading keyword/name: `( params )
+// [: super(..)/this(..)] { body }`. Shared by `mersal init` and `aarambam`.
+std::unique_ptr<ConstructorDecl> Parser::parseConstructorRest(const SourceSpan& span) {
+    consume(TokenType::LEFT_PAREN, "expected '(' after constructor name");
+    std::vector<FuncDecl::Param> params;
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            std::string pTypeStr = parseTypeString();
+            Token pName = consume(TokenType::IDENTIFIER, "expected parameter name");
+            FuncDecl::Param p{pName.value, pTypeStr, nullptr};
+            if (match(TokenType::EQUAL)) {
+                p.defaultValue = std::shared_ptr<ASTNode>(expression().release());
+            }
+            params.push_back(std::move(p));
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "expected ')' after parameters");
+
+    std::vector<std::unique_ptr<ASTNode>> initList;
+    if (match(TokenType::COLON)) {
+        do {
+            if (check(TokenType::SUPER) || check(TokenType::THIS)) {
+                Token cToken = advance();
+                consume(TokenType::LEFT_PAREN, "expected '(' after call");
+                std::vector<std::unique_ptr<ASTNode>> args;
+                if (!check(TokenType::RIGHT_PAREN)) {
+                    do { args.push_back(expression()); } while (match(TokenType::COMMA));
+                }
+                consume(TokenType::RIGHT_PAREN, "expected ')' after call arguments");
+                auto call = std::make_unique<CallExpr>();
+                call->span = cToken.span;
+                auto callee = std::make_unique<IdentifierExpr>();
+                callee->span = cToken.span;
+                callee->name = cToken.value;
+                call->callee = std::move(callee);
+                call->arguments = std::move(args);
+                initList.push_back(std::move(call));
+            } else {
+                addError(peek(), "expected parent or sibling constructor call");
+                advance();
+            }
+        } while (match(TokenType::COMMA));
+    }
+
+    auto body = blockStatement();
+    auto constrDecl = std::make_unique<ConstructorDecl>();
+    constrDecl->span = span;
+    constrDecl->params = params;
+    constrDecl->initializerList = std::move(initList);
+    constrDecl->body = std::move(body);
+    return constrDecl;
+}
+
+std::unique_ptr<ASTNode> Parser::matchStatement() {
+    auto stmt = std::make_unique<MatchStmt>();
+    stmt->span = previous().span; // the 'yaaru' token
+    stmt->subject = expression();
+    consume(TokenType::LEFT_BRACE, "expected '{' after yaaru subject");
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        if (match(TokenType::IVAN)) {
+            MatchArm arm;
+            arm.pattern = expression();
+            arm.body = blockStatement();
+            stmt->arms.push_back(std::move(arm));
+        } else if (match(TokenType::YAARUMILLA)) {
+            stmt->defaultBody = blockStatement();
+        } else {
+            addError(peek(), "expected 'ivan' arm or 'yaarumilla' default in yaaru block");
+            advance();
+        }
+    }
+    consume(TokenType::RIGHT_BRACE, "expected '}' to close yaaru block");
+    return stmt;
+}
+
 std::unique_ptr<ASTNode> Parser::rangeLoopStatement() {
     Token vaathiToken = previous();
+
+    // Pattern loop: `vaathi nanbi [a, b] ulla <iterable> { ... }`
+    if (match(TokenType::NANBI)) {
+        bool isObj = false;
+        std::vector<NanbiBinding> bindings;
+        parseNanbiPattern(isObj, bindings);
+        Token inTok = consume(TokenType::IDENTIFIER, "expected 'ulla' after nanbi pattern");
+        if (inTok.value != "ulla" && inTok.value != "in") {
+            addError(inTok, "expected 'ulla' between nanbi pattern and iterable");
+        }
+        auto iterable = expression();
+        auto body = statement();
+        auto stmt = std::make_unique<ForEachStmt>();
+        stmt->span = vaathiToken.span;
+        stmt->hasPattern = true;
+        stmt->patternIsObject = isObj;
+        stmt->patternBindings = std::move(bindings);
+        stmt->iterable = std::move(iterable);
+        stmt->body = std::move(body);
+        return stmt;
+    }
+
     Token varNameToken = consume(TokenType::IDENTIFIER, "expected loop variable identifier");
 
-    Token inToken = consume(TokenType::IDENTIFIER, "expected 'in' keyword in loop");
-    if (inToken.value != "in") {
-        addError(inToken, "expected 'in' between loop variable and iterable");
+    // Canonical `ulla` or legacy `in` relate the loop variable to the iterable.
+    Token inToken = consume(TokenType::IDENTIFIER, "expected 'ulla' keyword in loop");
+    if (inToken.value != "ulla" && inToken.value != "in") {
+        addError(inToken, "expected 'ulla' between loop variable and iterable");
     }
 
     // Special-case the range(a, b) counted loop while it is still an identifier.
@@ -1031,14 +1209,31 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
             return expr;
         }
         case TokenType::KUTTY: {
-            return lambdaExpression(token);
+            return lambdaExpression(token, false);
+        }
+        case TokenType::VARUM: {
+            if (check(TokenType::KUTTY)) {
+                advance(); // consume KUTTY
+                Token kuttyToken = previous();
+                return lambdaExpression(kuttyToken, true);
+            }
+            addError(token, "expected 'kutty' after 'varum' in lambda expression");
+            return nullptr;
         }
         case TokenType::SUPER: {
             consume(TokenType::DOT, "expected '.' after 'super'");
-            Token methodToken = consume(TokenType::IDENTIFIER, "expected super method name");
+            // `aarambam` is the canonical constructor name but is a keyword, so
+            // accept it (and `init`) as well as ordinary identifier method names.
+            std::string superMethod;
+            if (match(TokenType::AARAMBAM)) {
+                superMethod = "aarambam";
+            } else {
+                Token methodToken = consume(TokenType::IDENTIFIER, "expected super method name");
+                superMethod = methodToken.value;
+            }
             auto expr = std::make_unique<SuperExpr>();
             expr->span = token.span;
-            expr->method = methodToken.value;
+            expr->method = superMethod;
             return expr;
         }
 
@@ -1079,6 +1274,7 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
         }
 
         // Unary Prefix
+        case TokenType::KAATHIRU:
         case TokenType::BANG:
         case TokenType::MINUS:
         case TokenType::PLUS_PLUS:
@@ -1096,7 +1292,7 @@ std::unique_ptr<ASTNode> Parser::parsePrefix(const Token& token) {
     }
 }
 
-std::unique_ptr<ASTNode> Parser::lambdaExpression(const Token& kuttyToken) {
+std::unique_ptr<ASTNode> Parser::lambdaExpression(const Token& kuttyToken, bool isAsync) {
     // Syntax: kutty (params) [-> retType] { body }
     // Parameters may be typed (int a) or untyped (a -> inferred 'any').
     consume(TokenType::LEFT_PAREN, "expected '(' after 'kutty'");
@@ -1104,6 +1300,7 @@ std::unique_ptr<ASTNode> Parser::lambdaExpression(const Token& kuttyToken) {
     auto funcNode = std::make_unique<FuncDecl>();
     funcNode->span = kuttyToken.span;
     funcNode->name = "<kutty>";
+    funcNode->isAsync = isAsync;
 
     if (!check(TokenType::RIGHT_PAREN)) {
         do {

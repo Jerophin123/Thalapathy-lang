@@ -1,0 +1,41 @@
+// vaanganna.tvk — THALAPATHY I/O module
+// "Vaanga vaanga, sollu-nga; kelu-nga, naan padikkiren." 🎤
+// Canonical I/O identity. Conventional equivalent: stdio (print / input).
+
+master _Vaanganna {
+    // Output uses the global `sollu(...)` builtin directly (it is a reserved
+    // grammar token, so it cannot also be a method name). This module owns INPUT.
+
+    // kelu(prompt) — ask & read one line. Conventional: input/readLine
+    mersal kelu(any prompt) -> string {
+        sollu(prompt);
+        thiruppi __native_read_line();
+    }
+
+    // vaasi() — read one line, no prompt. Conventional: readLine
+    mersal vaasi() -> string {
+        thiruppi __native_read_line();
+    }
+
+    // ennaNumber(prompt) — read an integer. Conventional: readInt
+    mersal ennaNumber(any prompt) -> int {
+        thiruppi int(this.kelu(prompt));
+    }
+
+    // ennaDecimal(prompt) — read a float. Conventional: readFloat
+    mersal ennaDecimal(any prompt) -> float {
+        thiruppi float(this.kelu(prompt));
+    }
+
+    // aamaIlla(prompt) — read yes/no -> bool. Conventional: readBool
+    mersal aamaIlla(any prompt) -> bool {
+        makkal ans = this.kelu(prompt);
+        ghilli (ans == "aama") { thiruppi true; }
+        ghilli (ans == "aamaam") { thiruppi true; }
+        ghilli (ans == "yes") { thiruppi true; }
+        ghilli (ans == "y") { thiruppi true; }
+        thiruppi false;
+    }
+}
+
+makkal vaanganna = _Vaanganna();

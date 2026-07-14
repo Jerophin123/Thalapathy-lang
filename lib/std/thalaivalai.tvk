@@ -1,0 +1,582 @@
+// thalaivalai.tvk — THALAIVALAI Web Application Framework 🌐🔥
+// "Vazhi clear. Server entry ready." — build sites the THALAPATHY way.
+// Conventional equivalent: a Flask/Express-style app (but Vijay-native APIs).
+
+sarkar velayudham;   // file reading for templates + static assets
+sarkar bathil;       // response helpers
+sarkar arasu;        // environment variables
+
+// query/form parser: "a=1&b=vijay" -> map
+mersal _tv_parseQuery(string q) -> any {
+    makkal result = {};
+    ghilli (q == "") { thiruppi result; }
+    makkal pairs = __native_string_split(q, "&");
+    vaathi pair ulla pairs {
+        makkal kv = __native_string_split(pair, "=");
+        ghilli (len(kv) == 2) { result.set(kv[0], kv[1]); }
+    }
+    thiruppi result;
+}
+
+// cookie parser: "name=val; name2=val2" -> map
+mersal _tv_parseCookies(string cookieHeader) -> any {
+    makkal cookies = {};
+    ghilli (cookieHeader == onnumilla || cookieHeader == "") { thiruppi cookies; }
+    makkal parts = __native_string_split(cookieHeader, ";");
+    vaathi p ulla parts {
+        makkal kv = __native_string_split(p.trim(), "=");
+        ghilli (len(kv) == 2) {
+            cookies.set(kv[0].trim(), kv[1].trim());
+        }
+    }
+    thiruppi cookies;
+}
+
+mersal _tv_htmlEscape(string s) -> string {
+    makkal r = __native_string_replace(s, "&", "&amp;");
+    r = __native_string_replace(r, "<", "&lt;");
+    r = __native_string_replace(r, ">", "&gt;");
+    r = __native_string_replace(r, "\"", "&quot;");
+    thiruppi r;
+}
+
+// ---- Dotted path and Expression Evaluator for templates ----
+
+mersal _tv_isNumeric(string s) -> bool {
+    ghilli (len(s) == 0) { thiruppi false; }
+    bigil (makkal i = 0; i < len(s); i = i + 1) {
+        makkal c = s.charAt(i);
+        ghilli (c != "0" && c != "1" && c != "2" && c != "3" && c != "4" && c != "5" && c != "6" && c != "7" && c != "8" && c != "9" && c != ".") {
+            thiruppi false;
+        }
+    }
+    thiruppi true;
+}
+
+mersal _tv_evalValue(string expr, any data) -> any {
+    expr = expr.trim();
+    ghilli (expr.startsWith("\"") && expr.endsWith("\"")) {
+        thiruppi expr.substring(1, len(expr) - 2);
+    }
+    ghilli (expr.startsWith("'") && expr.endsWith("'")) {
+        thiruppi expr.substring(1, len(expr) - 2);
+    }
+    ghilli (expr == "true" || expr == "aama") { thiruppi true; }
+    ghilli (expr == "false" || expr == "illa") { thiruppi false; }
+    ghilli (expr == "null" || expr == "onnumilla") { thiruppi onnumilla; }
+    ghilli (_tv_isNumeric(expr)) {
+        ghilli (expr.contains(".")) { thiruppi float(expr); }
+        thiruppi int(expr);
+    }
+    makkal parts = __native_string_split(expr, ".");
+    makkal val = data;
+    vaathi p ulla parts {
+        ghilli (val != onnumilla && type(val) == "map") {
+            val = val.get(p);
+        } illana {
+            val = onnumilla;
+        }
+    }
+    thiruppi val;
+}
+
+mersal _tv_evalExpr(string expr, any data) -> any {
+    expr = expr.trim();
+    ghilli (expr.startsWith("!")) {
+        makkal sub = _tv_evalExpr(expr.substring(1), data);
+        thiruppi !sub;
+    }
+
+    makkal op = "";
+    makkal idx = -1;
+    ghilli (expr.contains("==")) { op = "=="; idx = expr.indexOf("=="); }
+    illana ghilli (expr.contains("!=")) { op = "!="; idx = expr.indexOf("!="); }
+    illana ghilli (expr.contains("<=")) { op = "<="; idx = expr.indexOf("<="); }
+    illana ghilli (expr.contains(">=")) { op = ">="; idx = expr.indexOf(">="); }
+    illana ghilli (expr.contains("<"))  { op = "<";  idx = expr.indexOf("<"); }
+    illana ghilli (expr.contains(">"))  { op = ">";  idx = expr.indexOf(">"); }
+
+    ghilli (idx != -1) {
+        makkal leftStr = expr.substring(0, idx).trim();
+        makkal rightStr = expr.substring(idx + len(op)).trim();
+        makkal leftVal = _tv_evalValue(leftStr, data);
+        makkal rightVal = _tv_evalValue(rightStr, data);
+
+        ghilli (op == "==") { thiruppi leftVal == rightVal; }
+        ghilli (op == "!=") { thiruppi leftVal != rightVal; }
+        ghilli (op == "<")  { thiruppi leftVal < rightVal; }
+        ghilli (op == ">")  { thiruppi leftVal > rightVal; }
+        ghilli (op == "<=") { thiruppi leftVal <= rightVal; }
+        ghilli (op == ">=") { thiruppi leftVal >= rightVal; }
+    }
+
+    thiruppi _tv_evalValue(expr, data);
+}
+
+// ---- Template Compiler & Node Interpreter ----
+
+mersal _tv_compileTemplate(string html) -> any {
+    makkal root_nodes = [];
+    makkal stack = [];
+    makkal cur_list = root_nodes;
+
+    makkal idx = 0;
+    makkal n = len(html);
+    thuppakki (idx < n) {
+        makkal nextTag = html.indexOf("{%", idx);
+        makkal nextVal = html.indexOf("{{", idx);
+
+        makkal minIdx = -1;
+        makkal tagType = ""; // "tag" or "val"
+
+        ghilli (nextTag != -1 && nextVal != -1) {
+            ghilli (nextTag < nextVal) { minIdx = nextTag; tagType = "tag"; }
+            illana { minIdx = nextVal; tagType = "val"; }
+        }
+        illana ghilli (nextTag != -1) { minIdx = nextTag; tagType = "tag"; }
+        illana ghilli (nextVal != -1) { minIdx = nextVal; tagType = "val"; }
+
+        ghilli (minIdx == -1) {
+            cur_list.push({ type: "text", content: html.substring(idx) });
+            idx = n;
+        } illana {
+            ghilli (minIdx > idx) {
+                cur_list.push({ type: "text", content: html.substring(idx, minIdx - idx) });
+            }
+
+            ghilli (tagType == "val") {
+                makkal closeIdx = html.indexOf("}}", minIdx);
+                ghilli (closeIdx == -1) {
+                    cur_list.push({ type: "text", content: html.substring(minIdx) });
+                    idx = n;
+                } illana {
+                    makkal expr = html.substring(minIdx + 2, closeIdx - minIdx - 2).trim();
+                    cur_list.push({ type: "val", expr: expr });
+                    idx = closeIdx + 2;
+                }
+            }
+            illana {
+                makkal closeIdx = html.indexOf("%}", minIdx);
+                ghilli (closeIdx == -1) {
+                    cur_list.push({ type: "text", content: html.substring(minIdx) });
+                    idx = n;
+                } illana {
+                    makkal content = html.substring(minIdx + 2, closeIdx - minIdx - 2).trim();
+                    idx = closeIdx + 2;
+
+                    ghilli (content.startsWith("ghilli")) {
+                        makkal condPart = content.substring(6).trim();
+                        ghilli (condPart.startsWith("(") && condPart.endsWith(")")) {
+                            condPart = condPart.substring(1, len(condPart) - 2).trim();
+                        }
+                        makkal node = { type: "ghilli", expr: condPart, then_nodes: [], else_nodes: [] };
+                        cur_list.push(node);
+                        makkal ctx = { type: "ghilli", node: node, list: node.then_nodes, active: "then" };
+                        stack.push(ctx);
+                        cur_list = node.then_nodes;
+                    }
+                    illana ghilli (content == "illana") {
+                        ghilli (len(stack) > 0) {
+                            makkal ctx = stack[len(stack) - 1];
+                            ghilli (ctx.get("type") == "ghilli") {
+                                ctx.set("active", "else");
+                                ctx.set("list", ctx.get("node").get("else_nodes"));
+                                cur_list = ctx.get("list");
+                            }
+                        }
+                    }
+                    illana ghilli (content.startsWith("vaathi")) {
+                        makkal loopPart = content.substring(6).trim();
+                        makkal ullaIdx = loopPart.indexOf("ulla");
+                        ghilli (ullaIdx != -1) {
+                            makkal varName = loopPart.substring(0, ullaIdx).trim();
+                            makkal listName = loopPart.substring(ullaIdx + 4).trim();
+                            makkal node = { type: "vaathi", var: varName, listExpr: listName, body_nodes: [] };
+                            cur_list.push(node);
+                            makkal ctx = { type: "vaathi", node: node, list: node.body_nodes };
+                            stack.push(ctx);
+                            cur_list = node.body_nodes;
+                        }
+                    }
+                    illana ghilli (content == "" || content == "mudivu" || content == "end") {
+                        ghilli (len(stack) > 0) {
+                            stack.pop();
+                            ghilli (len(stack) > 0) {
+                                cur_list = stack[len(stack) - 1].get("list");
+                            } illana {
+                                cur_list = root_nodes;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    thiruppi root_nodes;
+}
+
+mersal _tv_renderNodes(any nodes, any data) -> string {
+    makkal out = "";
+    vaathi node ulla nodes {
+        makkal nodeType = node.get("type");
+        ghilli (nodeType == "text") {
+            out = out + node.get("content");
+        }
+        illana ghilli (nodeType == "val") {
+            makkal val = _tv_evalExpr(node.get("expr"), data);
+            out = out + _tv_htmlEscape(string(val));
+        }
+        illana ghilli (nodeType == "ghilli") {
+            makkal cond = _tv_evalExpr(node.get("expr"), data);
+            makkal condBool = false;
+            ghilli (cond != onnumilla && cond != false) { condBool = true; }
+            ghilli (condBool) {
+                out = out + _tv_renderNodes(node.get("then_nodes"), data);
+            } illana {
+                out = out + _tv_renderNodes(node.get("else_nodes"), data);
+            }
+        }
+        illana ghilli (nodeType == "vaathi") {
+            makkal items = _tv_evalExpr(node.get("listExpr"), data);
+            ghilli (items != onnumilla && type(items) == "array") {
+                makkal varName = node.get("var");
+                vaathi item ulla items {
+                    makkal loopData = {};
+                    makkal parentKeys = data.keys();
+                    vaathi pk ulla parentKeys { loopData.set(pk, data.get(pk)); }
+                    loopData.set(varName, item);
+                    out = out + _tv_renderNodes(node.get("body_nodes"), loopData);
+                }
+            }
+        }
+    }
+    thiruppi out;
+}
+
+// ---- WebSocket & SSE direct wrappers ----
+
+master WebSocket {
+    int socketId;
+    mersal init(int sid) { naan.socketId = sid; }
+
+    mersal anuppu(string msg) {
+        __native_ws_send(naan.socketId, msg);
+    }
+    mersal kelu() -> string {
+        thiruppi __native_ws_recv(naan.socketId);
+    }
+    mersal mudichidu() {
+        __native_socket_close(naan.socketId);
+    }
+}
+
+master EventStream {
+    int socketId;
+    mersal init(int sid) { naan.socketId = sid; }
+
+    mersal anuppu(string msg) {
+        __native_sse_send(naan.socketId, msg);
+    }
+    mersal closed() -> bool {
+        thiruppi __native_socket_is_closed(naan.socketId);
+    }
+    mersal mudichidu() {
+        __native_socket_close(naan.socketId);
+    }
+}
+
+// Kelvi — the request object handed to every handler.
+master Kelvi {
+    any raw;
+    any params;
+    any cookies;
+    any session;
+
+    mersal init(any raw) {
+        naan.raw = raw;
+        naan.params = {};
+        makkal headers = raw.get("headers");
+        makkal cookieHeader = "";
+        ghilli (headers != onnumilla) {
+            cookieHeader = headers.get("Cookie");
+            ghilli (cookieHeader == onnumilla) {
+                cookieHeader = headers.get("cookie");
+            }
+        }
+        naan.cookies = _tv_parseCookies(cookieHeader);
+        naan.session = onnumilla;
+    }
+
+    mersal _setParams(any p) { naan.params = p; }
+
+    mersal murai() -> string { thiruppi naan.raw.get("method"); }        // HTTP method
+    mersal vazhi() -> string { thiruppi naan.raw.get("path"); }          // path
+    mersal urai() -> string { thiruppi naan.raw.get("body"); }           // raw body
+    mersal thalai() -> any { thiruppi naan.raw.get("headers"); }         // headers map
+    mersal jilla() -> any { thiruppi __native_json_parse(naan.raw.get("body")); } // JSON body
+    mersal kelvikuri() -> any { thiruppi _tv_parseQuery(naan.raw.get("query")); } // query params
+    mersal padivam() -> any { thiruppi _tv_parseQuery(naan.raw.get("body")); }    // form data
+    mersal vazhiThunai(string k) -> any { thiruppi naan.params.get(k); }          // route param
+    mersal cookie(string k) -> string { thiruppi naan.cookies.get(k); }
+    mersal kuki(string k) -> string { thiruppi naan.cookies.get(k); }
+    mersal amarvu() -> any { thiruppi naan.session; }
+}
+
+master _App {
+    any routes;
+    any middlewares;
+    any statics;
+    string paarvaiDir;
+    any _sessions;
+    any _templateCache;
+    int _sessionCounter;
+    string _corsOrigin;
+
+    mersal init() {
+        naan.routes = [];
+        naan.middlewares = [];
+        naan.statics = [];
+        naan.paarvaiDir = "paarvai";
+        naan._sessions = {};
+        naan._templateCache = {};
+        naan._sessionCounter = 0;
+        naan._corsOrigin = onnumilla;
+    }
+
+    mersal _add(string method, string path, any handler) {
+        naan.routes.push({ method: method, path: path, handler: handler });
+    }
+    mersal kelu(string p, any h)         { naan._add("GET", p, h); }     // GET
+    mersal anuppu(string p, any h)       { naan._add("POST", p, h); }    // POST
+    mersal muzhusaMaathu(string p, any h){ naan._add("PUT", p, h); }     // PUT
+    mersal konjamMaathu(string p, any h) { naan._add("PATCH", p, h); }   // PATCH
+    mersal neekku(string p, any h)       { naan._add("DELETE", p, h); }  // DELETE
+    mersal neradiValai(string p, any h)  { naan._add("WS", p, h); }      // WebSocket
+    mersal thodarAnuppu(string p, any h) { naan._add("SSE", p, h); }     // SSE
+    mersal ellaigal(string origin)       { naan._corsOrigin = origin; }  // CORS origin
+
+    mersal naduvila(any fn) { naan.middlewares.push(fn); }               // middleware
+    mersal sotthu(string prefix, string dir) {
+        naan.statics.push({ prefix: prefix, dir: dir });
+    }
+    mersal paarvaiIdam(string dir) { naan.paarvaiDir = dir; }
+
+    // kaattu(name, data) — render a view with {% %} control flow and {{ var }} interpolation
+    mersal kaattu(string name, any data) -> any {
+        makkal isProd = false;
+        makkal env = arasu.kaes("THALAIVALAI_ENV");
+        ghilli (env == "production") { isProd = true; }
+
+        makkal nodes = onnumilla;
+        ghilli (isProd) {
+            nodes = naan._templateCache.get(name);
+        }
+
+        ghilli (nodes == onnumilla) {
+            makkal path = naan.paarvaiDir + "/" + name;
+            makkal html = velayudham.padichu(path);
+            ghilli (html == onnumilla) {
+                thiruppi { status: 500, body: "Template kaanom da nanba: " + name, contentType: "text/html; charset=utf-8" };
+            }
+            nodes = _tv_compileTemplate(html);
+            ghilli (isProd) {
+                naan._templateCache.set(name, nodes);
+            }
+        }
+
+        ghilli (data == onnumilla) { data = {}; }
+        makkal body = _tv_renderNodes(nodes, data);
+        thiruppi { status: 200, body: body, contentType: "text/html; charset=utf-8" };
+    }
+
+    mersal _mime(string path) -> string {
+        ghilli (path.endsWith(".html")) { thiruppi "text/html; charset=utf-8"; }
+        ghilli (path.endsWith(".css"))  { thiruppi "text/css; charset=utf-8"; }
+        ghilli (path.endsWith(".js"))   { thiruppi "application/javascript; charset=utf-8"; }
+        ghilli (path.endsWith(".json")) { thiruppi "application/json"; }
+        ghilli (path.endsWith(".svg"))  { thiruppi "image/svg+xml"; }
+        ghilli (path.endsWith(".txt"))  { thiruppi "text/plain; charset=utf-8"; }
+        thiruppi "application/octet-stream";
+    }
+
+    mersal _serveStatic(string method, string path) -> any {
+        ghilli (method != "GET") { thiruppi onnumilla; }
+        ghilli (path.contains("..")) { thiruppi onnumilla; }
+        vaathi mount ulla naan.statics {
+            makkal prefix = mount.get("prefix");
+            ghilli (path.startsWith(prefix)) {
+                makkal rel = path.substring(len(prefix));
+                makkal file = mount.get("dir") + rel;
+                makkal data = velayudham.padichu(file);
+                ghilli (data != onnumilla) {
+                    thiruppi { status: 200, body: data, contentType: naan._mime(file) };
+                }
+            }
+        }
+        thiruppi onnumilla;
+    }
+
+    mersal _match(string routePath, string reqPath, any params) -> bool {
+        makkal rp = __native_string_split(routePath, "/");
+        makkal qp = __native_string_split(reqPath, "/");
+        ghilli (len(rp) != len(qp)) { thiruppi false; }
+        bigil (makkal i = 0; i < len(rp); i = i + 1) {
+            makkal seg = rp[i];
+            ghilli (seg.startsWith("<") && seg.endsWith(">")) {
+                params.set(seg.substring(1, len(seg) - 2), qp[i]);
+            } illana {
+                ghilli (seg.startsWith(":")) {
+                    params.set(seg.substring(1), qp[i]);
+                } illana {
+                    ghilli (seg != qp[i]) { thiruppi false; }
+                }
+            }
+        }
+        thiruppi true;
+    }
+
+    mersal _dispatch(any rawReq) -> any {
+        makkal method = rawReq.get("method");
+        makkal path = rawReq.get("path");
+        makkal headers = rawReq.get("headers");
+        makkal socketId = rawReq.get("socketId");
+
+        // Handle preflight OPTIONS request if ellaigal (CORS) is enabled
+        ghilli (method == "OPTIONS" && naan._corsOrigin != onnumilla) {
+            makkal ch = {};
+            ch.set("Access-Control-Allow-Origin", naan._corsOrigin);
+            ch.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+            ch.set("Access-Control-Allow-Headers", "*");
+            thiruppi { status: 204, body: "", contentType: "text/plain", headers: ch };
+        }
+
+        makkal kelvi = Kelvi(rawReq);
+
+        // Session handling
+        makkal sid = kelvi.kuki("amarvu_id");
+        makkal sessionData = onnumilla;
+        makkal newSession = false;
+        ghilli (sid != onnumilla && sid != "") {
+            sessionData = naan._sessions.get(sid);
+        }
+        ghilli (sessionData == onnumilla) {
+            naan._sessionCounter = naan._sessionCounter + 1;
+            sid = string(__native_time_now()) + "_" + string(naan._sessionCounter);
+            sessionData = {};
+            naan._sessions.set(sid, sessionData);
+            newSession = true;
+        }
+        kelvi.session = sessionData;
+
+        // Middleware
+        vaathi mw ulla naan.middlewares {
+            makkal r = mw(kelvi);
+            ghilli (r != onnumilla) { thiruppi r; }
+        }
+
+        // WebSockets upgrade dispatch
+        makkal hasUpgrade = false;
+        ghilli (headers != onnumilla) {
+            makkal upHeader = headers.get("Upgrade");
+            ghilli (upHeader == onnumilla) { upHeader = headers.get("upgrade"); }
+            ghilli (upHeader == "websocket") { hasUpgrade = true; }
+        }
+
+        ghilli (hasUpgrade) {
+            vaathi route ulla naan.routes {
+                ghilli (route.get("method") == "WS") {
+                    makkal params = {};
+                    ghilli (naan._match(route.get("path"), path, params)) {
+                        makkal ok = __native_ws_upgrade(socketId, headers);
+                        ghilli (ok) {
+                            makkal ws = WebSocket(socketId);
+                            makkal handler = route.get("handler");
+                            handler(ws);
+                            __native_socket_close(socketId);
+                            thiruppi { status: -1, body: "", contentType: "text/plain" };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Normal and SSE route dispatch
+        vaathi route ulla naan.routes {
+            makkal rMethod = route.get("method");
+            ghilli (rMethod == method || (rMethod == "SSE" && method == "GET")) {
+                makkal params = {};
+                ghilli (naan._match(route.get("path"), path, params)) {
+                    kelvi._setParams(params);
+                    makkal handler = route.get("handler");
+
+                    ghilli (rMethod == "SSE") {
+                        makkal ok = __native_sse_upgrade(socketId);
+                        ghilli (ok) {
+                            makkal sse = EventStream(socketId);
+                            handler(sse);
+                            __native_socket_close(socketId);
+                            thiruppi { status: -1, body: "", contentType: "text/plain" };
+                        }
+                    }
+
+                    makkal resp = handler(kelvi);
+
+                    // Add CORS header if ellaigal is configured
+                    ghilli (naan._corsOrigin != onnumilla && resp != onnumilla && type(resp) == "map") {
+                        makkal rh = resp.get("headers");
+                        ghilli (rh == onnumilla) { rh = {}; resp.set("headers", rh); }
+                        rh.set("Access-Control-Allow-Origin", naan._corsOrigin);
+                    }
+
+                    // Process cookies map
+                    ghilli (resp != onnumilla && type(resp) == "map") {
+                        makkal customCookies = resp.get("cookies");
+                        makkal sc = "";
+                        ghilli (customCookies != onnumilla && type(customCookies) == "map") {
+                            makkal keys = customCookies.keys();
+                            vaathi ck ulla keys {
+                                makkal cv = customCookies.get(ck);
+                                ghilli (sc != "") { sc = sc + "\r\nSet-Cookie: "; }
+                                sc = sc + ck + "=" + cv + "; Path=/";
+                            }
+                        }
+
+                        // Add session cookie
+                        ghilli (newSession) {
+                            ghilli (sc != "") { sc = sc + "\r\nSet-Cookie: "; }
+                            sc = sc + "amarvu_id=" + sid + "; Path=/";
+                        }
+
+                        ghilli (sc != "") {
+                            makkal rh = resp.get("headers");
+                            ghilli (rh == onnumilla) { rh = {}; resp.set("headers", rh); }
+                            makkal existing = rh.get("Set-Cookie");
+                            ghilli (existing != onnumilla && existing != "") {
+                                rh.set("Set-Cookie", existing + "\r\nSet-Cookie: " + sc);
+                            } illana {
+                                rh.set("Set-Cookie", sc);
+                            }
+                        }
+                    }
+
+                    thiruppi resp;
+                }
+            }
+        }
+
+        makkal st = naan._serveStatic(method, path);
+        ghilli (st != onnumilla) { st = st; }
+        thiruppi { status: 404, body: "<h1>404 — Intha vazhi map-la illa da nanba 😭</h1>", contentType: "text/html; charset=utf-8" };
+    }
+
+    mersal oduda(int port) -> bool {
+        makkal self = naan;
+        thiruppi __native_http_serve(port, kutty (req) { thiruppi self._dispatch(req); });
+    }
+}
+
+master _Thalaivalai {
+    mersal pudhu() -> any { thiruppi _App(); }
+}
+
+makkal thalaivalai = _Thalaivalai();

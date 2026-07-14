@@ -1,6 +1,8 @@
 # THALAPATHY Programming Language: Definitive Guide & Reference Manual
 
-THALAPATHY is a gradually-typed, object-oriented, modular programming language designed as a functional fan tribute to the iconic Indian actor and politician Thalapathy Vijay. It maps standard structural and object-oriented paradigms onto keywords derived from Vijay's blockbuster films, fan terms, and political dialogue memes.
+**Version 1.0.0** · Full doc hub: [README.md](README.md) · Tribute: [TRIBUTE.md](TRIBUTE.md)
+
+THALAPATHY is a gradually-typed, object-oriented, modular programming language designed as a fan tribute to **Joseph Vijay Chandrasekhar** — Thalapathy Vijay — the iconic actor and Honourable Chief Minister of Tamil Nadu. It maps standard structural and object-oriented paradigms onto keywords derived from Vijay's blockbuster films, fan terms, and cinema dialogue.
 
 ---
 

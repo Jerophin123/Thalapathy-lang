@@ -1,0 +1,32 @@
+// satham.tvk — THALAPATHY Logging module
+// "Satham podu! Ooru sundhu paakkanum." 📣
+// Conventional equivalent: logging (TRACE/DEBUG/INFO/WARN/ERROR/FATAL)
+
+master _SathamVoice {
+    string name;
+
+    mersal init(string name) {
+        this.name = name;
+    }
+
+    mersal _say(string level, any msg) {
+        __native_log(level, "[" + this.name + "] " + string(msg));
+    }
+
+    // Method names avoid reserved keywords (paaru/theri are grammar tokens).
+    mersal suvadu(any msg)  { this._say("TRACE", msg); }   // TRACE
+    mersal kannu(any msg)   { this._say("DEBUG", msg); }   // DEBUG (was: paaru — reserved)
+    mersal satham(any msg)  { this._say("INFO", msg); }    // INFO
+    mersal warning(any msg) { this._say("WARN", msg); }    // WARN
+    mersal pizhai(any msg)  { this._say("ERROR", msg); }   // ERROR (was: theri — reserved)
+    mersal saavu(any msg)   { this._say("FATAL", msg); }   // FATAL (was: mudivu — now a keyword)
+}
+
+master _Satham {
+    // voice(name) — get a named logger. Conventional: getLogger
+    mersal voice(string name) -> any {
+        thiruppi _SathamVoice(name);
+    }
+}
+
+makkal satham = _Satham();

@@ -1,0 +1,49 @@
+// kalanjiyam.tvk — THALAPATHY document database
+// "Kalanjiyam-la ellaa record-um pathiramaa irukku da nanba." 🗄️
+// Conventional equivalent: an embedded document store (Mongo-style collections).
+// Backed by the real VijayDB native layer (JSON-persisted, snapshot isolation).
+
+master _Kalanjiyam {
+    // thira(path) — open/create a database, returns a handle. Conventional: open
+    mersal thira(string path) -> any {
+        thiruppi __native_db_open(path);
+    }
+
+    // serthu(h, coll, doc) — insert a document (gets an auto id). Conventional: insert
+    mersal serthu(any h, string coll, any doc) -> any {
+        thiruppi __native_db_insert(h, coll, doc);
+    }
+
+    // ellam(h, coll) — all documents in a collection. Conventional: findAll
+    mersal ellam(any h, string coll) -> any {
+        thiruppi __native_db_all(h, coll);
+    }
+
+    // thedu(h, coll, field, value) — documents where field == value. Conventional: find
+    mersal thedu(any h, string coll, string field, any value) -> any {
+        thiruppi __native_db_find(h, coll, field, value);
+    }
+
+    // edu(h, coll, id) — one document by id. Conventional: get
+    mersal edu(any h, string coll, int id) -> any {
+        thiruppi __native_db_get(h, coll, id);
+    }
+
+    // puduppi(h, coll, id, doc) — update a document. Conventional: update
+    // (name avoids the reserved keyword `maathu`)
+    mersal puduppi(any h, string coll, int id, any doc) -> bool {
+        thiruppi __native_db_update(h, coll, id, doc);
+    }
+
+    // neekku(h, coll, id) — delete a document. Conventional: remove
+    mersal neekku(any h, string coll, int id) -> bool {
+        thiruppi __native_db_remove(h, coll, id);
+    }
+
+    // ennikkai(h, coll) — count documents. Conventional: count
+    mersal ennikkai(any h, string coll) -> int {
+        thiruppi __native_db_count(h, coll);
+    }
+}
+
+makkal kalanjiyam = _Kalanjiyam();

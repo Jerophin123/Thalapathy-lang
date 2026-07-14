@@ -1,0 +1,62 @@
+// ozhungu.tvk — THALAPATHY Algorithms module
+// "Ellaathaiyum ozhungu-ah adukku." 📐
+// Conventional equivalent: <algorithm>
+
+master _Ozhungu {
+    // ozhunguPannu(list) — ascending sort (stable insertion), returns a new list.
+    // Note: built with push-only ordered insertion because the interpreter's
+    // '&&' is not currently short-circuiting (see ROADMAP: THALA-LOGIC-001),
+    // so we avoid any guarded negative-index access.
+    mersal ozhunguPannu(any list) -> any {
+        makkal out = [];
+        vaathi item in list {
+            makkal res = [];
+            makkal placed = false;
+            vaathi x in out {
+                ghilli (!placed) {
+                    ghilli (item < x) {
+                        res.push(item);
+                        placed = true;
+                    }
+                }
+                res.push(x);
+            }
+            ghilli (!placed) { res.push(item); }
+            out = res;
+        }
+        thiruppi out;
+    }
+
+    // thiruppu(list) — reversed copy. Conventional: reverse
+    mersal thiruppu(any list) -> any {
+        makkal out = [];
+        bigil (makkal i = len(list) - 1; i >= 0; i = i - 1) {
+            out.push(list[i]);
+        }
+        thiruppi out;
+    }
+
+    // thaniyaa(list) — unique, order preserved. Conventional: unique
+    mersal thaniyaa(any list) -> any {
+        makkal out = [];
+        vaathi item in list {
+            ghilli (!out.contains(item)) { out.push(item); }
+        }
+        thiruppi out;
+    }
+
+    // paathiThedal(sorted, x) — binary search, index or -1. Conventional: binarySearch
+    mersal paathiThedal(any sorted, any x) -> int {
+        makkal lo = 0;
+        makkal hi = len(sorted) - 1;
+        bigil (; lo <= hi;) {
+            makkal mid = (lo + hi) / 2;
+            ghilli (sorted[mid] == x) { thiruppi mid; }
+            ghilli (sorted[mid] < x) { lo = mid + 1; }
+            illana { hi = mid - 1; }
+        }
+        thiruppi -1;
+    }
+}
+
+makkal ozhungu = _Ozhungu();

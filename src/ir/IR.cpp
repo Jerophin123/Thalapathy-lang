@@ -672,6 +672,8 @@ void IRGenerator::visit(UnaryExpr* node) {
     node->operand->accept(this);
     if (node->op == TokenType::BANG) {
         ir.instructions.push_back(Instruction{OpCode::NOT, 0});
+    } else if (node->op == TokenType::KAATHIRU) {
+        ir.instructions.push_back(Instruction{OpCode::AWAIT, 0});
     }
 }
 

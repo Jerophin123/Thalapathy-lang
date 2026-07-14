@@ -1,0 +1,27 @@
+// neram.tvk — THALAPATHY Time / Date module
+// "Neram vandhaachu... clock ippo namma kaila." ⏱️
+// Conventional equivalent: time / datetime
+
+master _Neram {
+    // ippo() — wall clock epoch milliseconds. Conventional: now
+    mersal ippo() -> int {
+        thiruppi __native_time_millis();
+    }
+
+    // indruSeconds() — epoch seconds. Conventional: dateNow
+    mersal indruSeconds() -> int {
+        thiruppi __native_date_now_seconds();
+    }
+
+    // kaathiru(ms) — sleep for milliseconds. Conventional: sleep
+    mersal kaathiru(int ms) {
+        __native_sleep_ms(ms);
+    }
+
+    // kaatu(fmt) — format the current local time. Conventional: format (strftime)
+    mersal kaatu(string fmt) -> string {
+        thiruppi __native_date_format(__native_date_now_seconds(), fmt);
+    }
+}
+
+makkal neram = _Neram();

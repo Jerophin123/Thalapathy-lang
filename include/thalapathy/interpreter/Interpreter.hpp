@@ -34,6 +34,10 @@ public:
 
     // Visitor methods
     void visit(VarDecl* node) override;
+    void visit(NanbiDecl* node) override;
+    void visit(MatchStmt* node) override;
+    // Bind a nanbi pattern against an already-evaluated source value.
+    void bindPattern(bool isObjectPattern, const std::vector<NanbiBinding>& bindings, const Value& source);
     void visit(FuncDecl* node) override;
     void visit(ClassDecl* node) override;
     void visit(EntryBlockDecl* node) override;
@@ -87,6 +91,14 @@ private:
     Value lastExprVal = Value{std::monostate{}};
 
     void executeBlock(BlockStmt* block, std::shared_ptr<Environment> env);
+
+    // Run a specific constructor against an already-allocated instance, honoring
+    // its initializer-list super(...)/this(...) chaining. Used for parent
+    // constructor invocation via `super.init(...)` / `munnadi.aarambam(...)`.
+    void runConstructorOn(const Value& objVal,
+                          std::shared_ptr<ClassValue> ownerKlass,
+                          ConstructorDecl* cDecl,
+                          const std::vector<Value>& cArgs);
 
     // Built-in method dispatch on collections / strings. Returns true if handled.
     bool tryInvokeMethod(const Value& obj, const std::string& name,

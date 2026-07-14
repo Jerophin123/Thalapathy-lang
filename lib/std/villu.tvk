@@ -1,0 +1,33 @@
+// villu.tvk — THALAPATHY HTTP module
+// "Villu-la ambu maadhiri request-a server-ku vitten." 🏹
+// Conventional equivalent: http client.
+// Every call returns a map: { success, status, body, error }.
+
+master _Villu {
+    // kelu(url) — GET
+    mersal kelu(string url) -> any {
+        thiruppi __native_http_get(url);
+    }
+
+    // anuppu(url, body) — POST
+    mersal anuppu(string url, any body) -> any {
+        thiruppi __native_http_post(url, string(body));
+    }
+
+    // puduppi(url, body) — PUT  (name avoids reserved 'maathu')
+    mersal puduppi(string url, any body) -> any {
+        thiruppi __native_http_request("PUT", url, string(body));
+    }
+
+    // thiruthu(url, body) — PATCH
+    mersal thiruthu(string url, any body) -> any {
+        thiruppi __native_http_request("PATCH", url, string(body));
+    }
+
+    // azhi(url) — DELETE
+    mersal azhi(string url) -> any {
+        thiruppi __native_http_request("DELETE", url);
+    }
+}
+
+makkal villu = _Villu();

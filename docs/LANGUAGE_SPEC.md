@@ -1,6 +1,8 @@
-# THALAPATHY Language Specification v0.2.0
+# THALAPATHY Language Specification v1.0.0
 
 This document defines the features, keywords, structures, and basic syntax constraints of the THALAPATHY programming language.
+
+> **Companion docs:** [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) (tutorial) · [THALAPATHY_API_LEXICON.md](THALAPATHY_API_LEXICON.md) (canonical names) · [docs/README.md](README.md) (full index)
 
 ## Keywords
 
